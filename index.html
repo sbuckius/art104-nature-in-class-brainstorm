@@ -68,8 +68,8 @@
     --surface3: #102848;
     --border: rgba(26,127,224,0.18);
     --border2: rgba(77,174,255,0.14);
-    --text: #e8f2ff;
-    --muted: rgba(170,216,255,0.5);
+    --text: #ffffff;
+    --muted: rgba(200,228,255,0.82);
     --font-head: 'Josefin Sans', sans-serif;
     --font-body: 'Cormorant Garamond', serif;
     --font-mono: 'Share Tech Mono', monospace;
@@ -1687,7 +1687,8 @@
       <span id="badge-text">—</span>
     </div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-      <button class="btn-export" id="export-btn" onclick="exportPDF()">⬇ Export Group PDF</button>
+      <button class="btn-export" id="export-btn" onclick="exportPDF()">⬇ Export Full PDF</button>
+      <button class="btn-export" id="export-presentation-btn" onclick="exportPresentation()" style="background:linear-gradient(135deg,var(--b2),var(--b3),var(--b4));">⬇ Export 2-Page Presentation</button>
       <button class="btn-ghost" onclick="openResetModal()">⟳ Reset Group Data</button>
       <button class="btn-ghost" onclick="returnToSetup()">← Change User</button>
     </div>
@@ -1873,6 +1874,24 @@
       Read everyone's ideas in Section 04. Now write your own complete, integrated synthesis for the final speculative artwork — weaving together the natural image, technology, theme, and your group's collective thinking.
     </p>
     <div id="synthesis-cards"></div>
+  </section>
+
+  <!-- SECTION 06: Final Idea Sketch -->
+  <section id="section-final-sketch">
+    <div class="section-header" style="border-color:var(--b4);">
+      <span class="section-num" style="color:var(--b4);">06</span>
+      <span class="section-title" style="color:var(--b4);">FINAL IDEA SKETCH</span>
+    </div>
+    <p style="color:var(--muted);font-size:0.95rem;line-height:1.75;margin-bottom:2rem;">
+      Upload a sketch of your final speculative artwork idea. This can be hand-drawn, digital, rough or refined — anything that visually communicates your concept. Each person uploads their own sketch.
+    </p>
+    <div class="upload-zone" id="final-sketch-upload-zone">
+      <input type="file" id="final-sketch-file-input" accept="image/*" onchange="handleFinalSketchUpload(event)" />
+      <div class="upload-icon">✏️</div>
+      <p>Drop your final idea sketch or click to upload<br><small style="opacity:0.6;font-family:var(--font-mono);">PNG, JPG, GIF, WEBP</small></p>
+      <span class="count-badge" id="final-sketch-count-badge">0 sketches uploaded</span>
+    </div>
+    <div class="sketches-grid" id="final-sketches-grid"></div>
   </section>
 </div>
 
@@ -2246,7 +2265,7 @@ function groupDocId(g) { return `group_${g}`; }
 
 async function loadGroup() {
   if (!window._fbReady) {
-    groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+    groupData = { sketches: [], finalSketches: [], finalResponses: {}, combineResponses: {} };
     renderAll();
     return;
   }
@@ -2258,7 +2277,7 @@ async function loadGroup() {
     if (snap.exists()) {
       groupData = snap.data();
     } else {
-      groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+      groupData = { sketches: [], finalSketches: [], finalResponses: {}, combineResponses: {} };
     }
     renderAll();
   }, err => {
@@ -2843,10 +2862,100 @@ async function deleteSynthesisResponse() {
 function renderAll() {
   renderSelections();
   renderSketches();
+  renderFinalSketches();
   renderSummary();
   renderCombineResponses();
   renderFinalResponses();
   renderSynthesisCards();
+}
+
+// ═══════════════════════════════════════════════════
+// FINAL SKETCH UPLOAD
+// ═══════════════════════════════════════════════════
+function handleFinalSketchUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const finalSketches = groupData.finalSketches || [];
+  if (finalSketches.length >= 10) { showToast('Maximum 10 final sketches reached!', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 1000;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = h * MAX / w; w = MAX; }
+      if (h > MAX) { w = w * MAX / h; h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+      if (!groupData.finalSketches) groupData.finalSketches = [];
+      groupData.finalSketches.push({ id: Date.now().toString(), base64, uploader: currentUser, description: '' });
+      await saveGroup();
+      showToast('Final sketch uploaded! ✏️', 'success');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function renderFinalSketches() {
+  const finalSketches = groupData.finalSketches || [];
+  const grid = document.getElementById('final-sketches-grid');
+  const badge = document.getElementById('final-sketch-count-badge');
+  if (badge) badge.textContent = `${finalSketches.length} sketch${finalSketches.length !== 1 ? 'es' : ''} uploaded`;
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (finalSketches.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">✏️</div><p>No final sketches yet. Upload your final idea sketch above.</p></div>`;
+    return;
+  }
+
+  finalSketches.forEach((sk, i) => {
+    const isOwner = sk.uploader === currentUser;
+    const card = document.createElement('div');
+    card.className = 'sketch-card';
+    card.innerHTML = `
+      <div class="card-top"></div>
+      ${isOwner ? `<button class="delete-sketch-btn visible" onclick="deleteFinalSketch('${sk.id}')" title="Delete">✕</button>` : ''}
+      <img class="sketch-img" src="data:image/jpeg;base64,${sk.base64}" alt="Final sketch ${i+1}" loading="lazy" />
+      <div class="sketch-body">
+        <div class="sketch-meta">
+          <span class="sketch-num">FINAL SKETCH ${String(i+1).padStart(2,'0')}</span>
+          <span class="sketch-author">by ${escHtml(sk.uploader)}</span>
+        </div>
+        <textarea class="description-area"
+          placeholder="${isOwner ? 'Describe this final idea sketch...' : 'Description by ' + escHtml(sk.uploader)}"
+          ${isOwner ? '' : 'disabled'}
+          onblur="saveFinalSketchDescription('${sk.id}', this.value)"
+        >${escHtml(sk.description || '')}</textarea>
+        ${isOwner ? `<button class="save-btn" onclick="saveFinalSketchDescBtn('${sk.id}', this)">Save Description</button>` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+async function deleteFinalSketch(id) {
+  if (!confirm('Delete this final sketch?')) return;
+  groupData.finalSketches = (groupData.finalSketches || []).filter(s => s.id !== id);
+  await saveGroup();
+  showToast('Sketch removed', 'success');
+}
+
+async function saveFinalSketchDescription(id, value) {
+  const sk = (groupData.finalSketches || []).find(s => s.id === id);
+  if (!sk || sk.uploader !== currentUser) return;
+  sk.description = value;
+  await saveGroup();
+}
+
+async function saveFinalSketchDescBtn(id, btn) {
+  const ta = btn.previousElementSibling;
+  await saveFinalSketchDescription(id, ta.value);
+  showToast('Description saved!', 'success');
 }
 
 function renderSketches() {
@@ -2972,7 +3081,7 @@ function closeResetModal() { document.getElementById('reset-modal').classList.re
 async function confirmReset() {
   const pw = document.getElementById('reset-pw-input').value.trim();
   if (pw !== `group${currentGroup}`) { showToast('Wrong password!', 'error'); return; }
-  groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+  groupData = { sketches: [], finalSketches: [], finalResponses: {}, combineResponses: {} };
   await saveGroup();
   closeResetModal();
   showToast(`Group ${currentGroup} reset!`, 'success');
@@ -3232,13 +3341,293 @@ async function exportPDF() {
     console.error(e);
     showToast('PDF error: ' + e.message, 'error');
   } finally {
-    btn.disabled = false; btn.textContent = '⬇ Export Group PDF';
+    btn.disabled = false; btn.textContent = '⬇ Export Full PDF';
   }
 }
 
 // ═══════════════════════════════════════════════════
-// UTILS
+// 2-PAGE PRESENTATION PDF EXPORT
 // ═══════════════════════════════════════════════════
+async function exportPresentation() {
+  const btn = document.getElementById('export-presentation-btn');
+  btn.disabled = true; btn.textContent = '⏳ Building…';
+  showToast('Building presentation…', 'success');
+  try {
+    const { jsPDF } = window.jspdf;
+    // Landscape A4 for presentation feel
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pw = 297, ph = 210, ml = 14, mt = 14, mb = 14;
+    const cw = pw - ml * 2;
+    const maxY = ph - mb;
+
+    const sel = groupData.selections || {};
+    const natResearch = groupData.natResearch || {};
+    const synth = groupData.synthesisByUser || {};
+    const finalSketches = groupData.finalSketches || [];
+    const cr = groupData.combineResponses || {};
+    const fr = groupData.finalResponses || {};
+
+    const C = {
+      bg: [4, 12, 24],
+      surface: [8, 24, 48],
+      accent: [26, 127, 224],
+      accentLight: [112, 196, 255],
+      white: [255, 255, 255],
+      offwhite: [220, 235, 255],
+      muted: [140, 180, 220],
+      dark: [4, 12, 24]
+    };
+
+    function bgFill(p) {
+      doc.setPage(p);
+      doc.setFillColor(...C.bg);
+      doc.rect(0, 0, pw, ph, 'F');
+      // Top accent bar
+      doc.setFillColor(...C.accent);
+      doc.rect(0, 0, pw, 3, 'F');
+      doc.setFillColor(...C.accentLight);
+      doc.rect(0, 3, pw, 1, 'F');
+    }
+
+    function label(text, x, y_, color) {
+      doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+      doc.setTextColor(...color);
+      doc.text(text.toUpperCase(), x, y_);
+    }
+
+    function body(text, x, y_, maxW, size, color) {
+      doc.setFontSize(size || 8.5); doc.setFont('helvetica','normal');
+      doc.setTextColor(...color || C.white);
+      const charsPerLine = Math.max(10, Math.floor(maxW / ((size||8.5) * 0.215)));
+      const processed = String(text||'').replace(/\S+/g, w => {
+        if (w.length <= charsPerLine) return w;
+        const chunks = [];
+        for (let i=0; i<w.length; i+=charsPerLine) chunks.push(w.slice(i,i+charsPerLine));
+        return chunks.join(' ');
+      });
+      const lines = doc.splitTextToSize(processed, maxW);
+      lines.forEach((line, i) => { doc.text(line, x, y_ + i * ((size||8.5) * 0.44)); });
+      return y_ + lines.length * ((size||8.5) * 0.44);
+    }
+
+    function box(x, y_, w, h, fillColor, strokeColor) {
+      if (fillColor) { doc.setFillColor(...fillColor); doc.roundedRect(x, y_, w, h, 1.5, 1.5, 'F'); }
+      if (strokeColor) { doc.setDrawColor(...strokeColor); doc.setLineWidth(0.4); doc.roundedRect(x, y_, w, h, 1.5, 1.5, 'S'); }
+    }
+
+    async function addImg(base64, x, y_, maxW, maxH) {
+      if (!base64) return 0;
+      try {
+        const imgData = `data:image/jpeg;base64,${base64}`;
+        const tmp = new Image();
+        await new Promise(r => { tmp.onload=r; tmp.onerror=r; tmp.src=imgData; });
+        const aspect = tmp.naturalWidth / (tmp.naturalHeight || 1);
+        let iw = maxW, ih = iw / aspect;
+        if (ih > maxH) { ih = maxH; iw = ih * aspect; }
+        doc.addImage(imgData, 'JPEG', x, y_, iw, ih);
+        return ih;
+      } catch(e) { return 0; }
+    }
+
+    // ══════════════════════════════════════════════
+    // PAGE 1 — The Research & Concept
+    // ══════════════════════════════════════════════
+    doc.addPage(); // page 1 already exists, this creates page 2 — we'll work with page 1 first
+    doc.setPage(1);
+    bgFill(1);
+
+    // Header
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text(`Group ${currentGroup}  ·  Digital Brainstorming Tool About Nature  ·  Page 1 of 2`, pw/2, mt-2, {align:'center'});
+
+    doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.white);
+    doc.text('SPECULATIVE ARTWORK PROPOSAL', pw/2, mt+10, {align:'center'});
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.accentLight);
+    const selLabel = sel.naturalImage ? sel.naturalImage.label : '—';
+    const techLabel = sel.technology ? (TECHNOLOGIES.find(t=>t.id===sel.technology.id)||{}).name || '—' : '—';
+    const themeLabel = sel.theme ? (THEMES.find(t=>t.id===sel.theme.id)||{}).name || '—' : '—';
+    doc.text(`${selLabel}  ×  ${techLabel}`, pw/2, mt+17, {align:'center'});
+
+    // Divider
+    doc.setDrawColor(...C.accent); doc.setLineWidth(0.3); doc.line(ml, mt+21, pw-ml, mt+21);
+
+    const colY = mt + 26;
+    const colW = (cw - 10) / 3;
+
+    // ── Col 1: Natural Image + Research ──
+    const c1x = ml;
+    box(c1x, colY-4, colW, ph-colY-mb+2, [8,20,40], [26,127,224]);
+    label('Natural Image', c1x+4, colY+2, C.accentLight);
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.white);
+    const natLines = doc.splitTextToSize(selLabel, colW-8);
+    natLines.forEach((l,i) => doc.text(l, c1x+4, colY+8+i*5));
+    let c1y = colY + 8 + natLines.length*5 + 3;
+
+    // Try to show uploaded nature image
+    const anyNatImg = Object.values(natResearch).find(r => r.imageBase64);
+    if (anyNatImg) {
+      const ih = await addImg(anyNatImg.imageBase64, c1x+4, c1y, colW-8, 38);
+      c1y += ih + 3;
+    }
+
+    // Research notes
+    const allNotes = Object.entries(natResearch).filter(([,d])=>d.notes).map(([n,d])=>`${n}: ${d.notes}`).join('\n\n');
+    if (allNotes) {
+      label('Research Notes', c1x+4, c1y+2, C.accentLight); c1y += 6;
+      c1y = body(allNotes, c1x+4, c1y, colW-8, 7, C.offwhite) + 3;
+    }
+
+    // ── Col 2: Technology + Theme ──
+    const c2x = ml + colW + 5;
+    box(c2x, colY-4, colW, ph-colY-mb+2, [8,20,40], [26,127,224]);
+    label('Technology', c2x+4, colY+2, C.accentLight);
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.white);
+    const techLines = doc.splitTextToSize(techLabel, colW-8);
+    techLines.forEach((l,i) => doc.text(l, c2x+4, colY+8+i*5));
+    let c2y = colY + 8 + techLines.length*5 + 2;
+    const tech = sel.technology && TECHNOLOGIES.find(t=>t.id===sel.technology.id);
+    if (tech) { c2y = body(tech.desc, c2x+4, c2y, colW-8, 7, C.muted) + 5; }
+
+    label('Theme', c2x+4, c2y+2, C.accentLight); c2y += 6;
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.white);
+    const themeLines = doc.splitTextToSize(themeLabel, colW-8);
+    themeLines.forEach((l,i) => doc.text(l, c2x+4, c2y+i*5));
+    c2y += themeLines.length*5 + 2;
+    const theme = sel.theme && THEMES.find(t=>t.id===sel.theme.id);
+    if (theme) { c2y = body(theme.desc, c2x+4, c2y, colW-8, 7, C.muted) + 5; }
+
+    label('How We Combined Them', c2x+4, c2y+2, C.accentLight); c2y += 6;
+    const combineEntries = Object.entries(cr['nattech']||{});
+    if (combineEntries.length) {
+      const combinedText = combineEntries.map(([n,t])=>`${n}: ${t}`).join('\n');
+      body(combinedText, c2x+4, c2y, colW-8, 7, C.offwhite);
+    } else { body('No responses yet.', c2x+4, c2y, colW-8, 7, C.muted); }
+
+    // ── Col 3: Concept Responses ──
+    const c3x = ml + (colW+5)*2;
+    box(c3x, colY-4, colW, ph-colY-mb+2, [8,20,40], [26,127,224]);
+    let c3y = colY + 2;
+    const conceptQ = fr['idea_describe'] || {};
+    const whyQ = fr['idea_why'] || {};
+    label('Describe the Artwork', c3x+4, c3y, C.accentLight); c3y += 5;
+    const descEntries = Object.entries(conceptQ);
+    if (descEntries.length) {
+      const descText = descEntries.map(([n,t])=>`${n}: ${t}`).join('\n');
+      c3y = body(descText, c3x+4, c3y, colW-8, 7, C.offwhite) + 4;
+    } else { c3y = body('No responses yet.', c3x+4, c3y, colW-8, 7, C.muted) + 4; }
+
+    label('Why This Combination?', c3x+4, c3y, C.accentLight); c3y += 5;
+    const whyEntries = Object.entries(whyQ);
+    if (whyEntries.length) {
+      const whyText = whyEntries.map(([n,t])=>`${n}: ${t}`).join('\n');
+      c3y = body(whyText, c3x+4, c3y, colW-8, 7, C.offwhite) + 4;
+    } else { c3y = body('No responses yet.', c3x+4, c3y, colW-8, 7, C.muted) + 4; }
+
+    // Footer p1
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text(`Group ${currentGroup}  ·  Digital Brainstorming Tool About Nature  ·  Page 1 of 2`, pw/2, ph-4, {align:'center'});
+
+    // ══════════════════════════════════════════════
+    // PAGE 2 — The Artwork / Final Idea
+    // ══════════════════════════════════════════════
+    doc.setPage(2);
+    bgFill(2);
+
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text(`Group ${currentGroup}  ·  Digital Brainstorming Tool About Nature  ·  Page 2 of 2`, pw/2, mt-2, {align:'center'});
+
+    doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.white);
+    doc.text('THE FINAL IDEA', pw/2, mt+10, {align:'center'});
+    doc.setDrawColor(...C.accent); doc.setLineWidth(0.3); doc.line(ml, mt+14, pw-ml, mt+14);
+
+    const p2colY = mt + 19;
+
+    // Left: final sketches (big)
+    const sketchColW = cw * 0.42;
+    box(ml, p2colY-3, sketchColW, ph-p2colY-mb+1, [8,20,40], [26,127,224]);
+    label('Final Idea Sketches', ml+4, p2colY+2, C.accentLight);
+    let sketchY = p2colY + 8;
+    if (finalSketches.length === 0) {
+      body('No final sketches uploaded yet.', ml+4, sketchY, sketchColW-8, 8, C.muted);
+    } else {
+      // Fit up to 2 sketches side by side
+      const maxSketchH = (ph - p2colY - mb - 15) / Math.min(2, Math.ceil(finalSketches.length/2));
+      const thumbW = finalSketches.length > 1 ? (sketchColW-12)/2 : sketchColW-8;
+      let row = 0, col = 0;
+      for (let i = 0; i < Math.min(finalSketches.length, 4); i++) {
+        const sk = finalSketches[i];
+        const tx2 = ml + 4 + col * (thumbW + 4);
+        const ty2 = sketchY + row * (maxSketchH + 4);
+        const ih = await addImg(sk.base64, tx2, ty2, thumbW, maxSketchH - 6);
+        if (sk.description) {
+          doc.setFontSize(6); doc.setFont('helvetica','normal');
+          doc.setTextColor(...C.muted);
+          const dLine = doc.splitTextToSize(sk.description, thumbW)[0];
+          doc.text(dLine, tx2, ty2 + ih + 3);
+        }
+        col++;
+        if (col >= 2) { col = 0; row++; }
+      }
+    }
+
+    // Right side: split into top (synthesis) and bottom (medium+message)
+    const rightX = ml + sketchColW + 6;
+    const rightW = cw - sketchColW - 6;
+    const rightHalf = (ph - p2colY - mb - 4) / 2;
+
+    // Top right: Final Synthesis
+    box(rightX, p2colY-3, rightW, rightHalf - 1, [8,20,40], [26,127,224]);
+    label('Final Synthesis', rightX+4, p2colY+2, C.accentLight);
+    let synthY = p2colY + 8;
+    const synthEntries = Object.entries(synth);
+    if (synthEntries.length) {
+      const synthText = synthEntries.map(([n,t])=>`${n}:\n${t}`).join('\n\n');
+      body(synthText, rightX+4, synthY, rightW-8, 7.5, C.offwhite);
+    } else { body('No synthesis written yet.', rightX+4, synthY, rightW-8, 7.5, C.muted); }
+
+    // Bottom right: Medium & Message
+    const botY = p2colY + rightHalf + 2;
+    box(rightX, botY-3, rightW, rightHalf - 1, [8,20,40], [26,127,224]);
+    label('Medium & Making', rightX+4, botY+2, C.accentLight);
+    let botInnerY = botY + 8;
+    const medEntries = Object.entries(fr['idea_medium']||{});
+    if (medEntries.length) {
+      const medText = medEntries.map(([n,t])=>`${n}: ${t}`).join('\n');
+      botInnerY = body(medText, rightX+4, botInnerY, rightW-8, 7.5, C.offwhite) + 4;
+    } else { botInnerY = body('No responses yet.', rightX+4, botInnerY, rightW-8, 7.5, C.muted) + 4; }
+
+    label('Concept & Message', rightX+4, botInnerY+2, C.accentLight); botInnerY += 7;
+    const msgEntries = Object.entries(fr['idea_message']||{});
+    if (msgEntries.length) {
+      const msgText = msgEntries.map(([n,t])=>`${n}: ${t}`).join('\n');
+      body(msgText, rightX+4, botInnerY, rightW-8, 7.5, C.offwhite);
+    } else { body('No responses yet.', rightX+4, botInnerY, rightW-8, 7.5, C.muted); }
+
+    // Footer p2
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text(`Group ${currentGroup}  ·  Digital Brainstorming Tool About Nature  ·  Page 2 of 2`, pw/2, ph-4, {align:'center'});
+
+    doc.save(`NATURE_Group${currentGroup}_Presentation_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('Presentation exported! 🎨', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Export error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '⬇ Export 2-Page Presentation';
+  }
+}
+
+
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -3342,6 +3731,38 @@ if (zone) {
       const dt = new DataTransfer(); dt.items.add(file);
       document.getElementById('file-input').files = dt.files;
       handleFileUpload({ target: { files: dt.files, value: '' } });
+    }
+  });
+}
+
+// Drag-and-drop on final sketch upload zone
+const finalZone = document.getElementById('final-sketch-upload-zone');
+if (finalZone) {
+  finalZone.addEventListener('dragover', e => { e.preventDefault(); finalZone.classList.add('drag-over'); });
+  finalZone.addEventListener('dragleave', () => finalZone.classList.remove('drag-over'));
+  finalZone.addEventListener('drop', e => {
+    e.preventDefault(); finalZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('final-sketch-file-input').files = dt.files;
+      handleFinalSketchUpload({ target: { files: dt.files, value: '' } });
+    }
+  });
+}
+
+// Drag-and-drop on nat image upload zone
+const natZone = document.getElementById('nat-img-upload-zone');
+if (natZone) {
+  natZone.addEventListener('dragover', e => { e.preventDefault(); natZone.classList.add('drag-over'); });
+  natZone.addEventListener('dragleave', () => natZone.classList.remove('drag-over'));
+  natZone.addEventListener('drop', e => {
+    e.preventDefault(); natZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('nat-img-file-input').files = dt.files;
+      handleNatImageUpload({ target: { files: dt.files, value: '' } });
     }
   });
 }
