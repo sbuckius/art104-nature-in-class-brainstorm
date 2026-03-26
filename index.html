@@ -1,0 +1,3495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Brainstorming Tool about Nature</title>
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;300;400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDrK6yqD_FQVO0bV7lNdCwBfSkd_RQmzY0",
+    authDomain: "art104-nature-in-class-brainst.firebaseapp.com",
+    projectId: "art104-nature-in-class-brainst",
+    storageBucket: "art104-nature-in-class-brainst.firebasestorage.app",
+    messagingSenderId: "536561813658",
+    appId: "1:536561813658:web:f4e40d82df4dd2aa273723",
+    measurementId: "G-25E86LYTXH"
+  };
+
+  let app, db;
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    window._db = db;
+    window._fbReady = true;
+    window._fbFunctions = { doc, setDoc, getDoc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs };
+    document.dispatchEvent(new Event('firebase-ready'));
+  } catch(e) {
+    window._fbReady = false;
+    document.dispatchEvent(new CustomEvent('firebase-error', { detail: e.message }));
+  }
+</script>
+
+<style>
+  :root {
+    /* Blues — deep to bright */
+    --g1: #082a52;
+    --g2: #0f4a99;
+    --g3: #1a7fe0;
+    --g4: #4daeff;
+    --g5: #aad8ff;
+    /* Blues — secondary */
+    --b1: #061830;
+    --b2: #0d3a80;
+    --b3: #2090f0;
+    --b4: #70c4ff;
+    --b5: #c5e8ff;
+    /* Blue-teal accents */
+    --br1: #041020;
+    --br2: #0a2860;
+    --br3: #3a8fe8;
+    --br4: #88ccff;
+    --br5: #d0eaff;
+    /* Accents */
+    --accent1: #1a7fe0;
+    --accent2: #4daeff;
+    --accent3: #70c4ff;
+    --warn: #e85a2a;
+    /* Backgrounds — deep ocean blue */
+    --bg: #040c18;
+    --surface: #081428;
+    --surface2: #0c1e38;
+    --surface3: #102848;
+    --border: rgba(26,127,224,0.18);
+    --border2: rgba(77,174,255,0.14);
+    --text: #e8f2ff;
+    --muted: rgba(170,216,255,0.5);
+    --font-head: 'Josefin Sans', sans-serif;
+    --font-body: 'Cormorant Garamond', serif;
+    --font-mono: 'Share Tech Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 50% at 5% 15%, rgba(8,58,107,0.35) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 70% at 95% 30%, rgba(26,127,224,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 40% at 50% 85%, rgba(77,174,255,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 60% at 20% 70%, rgba(13,58,128,0.15) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .nature-bar {
+    height: 5px;
+    background: linear-gradient(90deg, var(--g1), var(--g3), var(--accent1), var(--b3), var(--b4), var(--br3), var(--g3), var(--g4));
+    background-size: 200% 100%;
+    animation: flowBar 6s linear infinite;
+  }
+
+  @keyframes flowBar {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #020912;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0;
+    padding: 2rem;
+    overflow-y: auto;
+  }
+
+  /* Animated canvas behind everything */
+  #setup-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.55;
+  }
+
+  /* Scanline overlay */
+  #setup-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(26,127,224,0.018) 2px,
+      rgba(26,127,224,0.018) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .setup-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .setup-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--b4);
+    opacity: 0.7;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .setup-eyebrow::before, .setup-eyebrow::after {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  /* Split title: "DIGITAL" stacked above "BRAINSTORMING TOOL" above "ABOUT NATURE" */
+  .setup-title-block {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+  }
+
+  .setup-title-digital {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: clamp(0.75rem, 2.5vw, 1rem);
+    letter-spacing: 0.55em;
+    text-transform: uppercase;
+    color: var(--b3);
+    opacity: 0.8;
+    margin-bottom: 0.3rem;
+  }
+
+  .setup-title-main {
+    display: block;
+    font-family: var(--font-head);
+    font-size: clamp(2.8rem, 9vw, 6rem);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text);
+    line-height: 0.92;
+  }
+
+  .setup-title-about {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.1rem, 3.5vw, 1.9rem);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--b4);
+    letter-spacing: 0.08em;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+  }
+
+  /* Thin divider with nodes */
+  .setup-divider {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1.6rem 0;
+    position: relative;
+  }
+
+  .setup-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--b3), transparent);
+    opacity: 0.4;
+  }
+
+  .setup-divider-node {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--b4);
+    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--b4);
+    animation: pulse-node 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-node {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.6); }
+  }
+
+  /* Tags row */
+  .setup-tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 2rem;
+  }
+
+  .setup-tag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--b3);
+    border: 1px solid rgba(32,144,240,0.25);
+    border-radius: 3px;
+    padding: 0.2rem 0.55rem;
+    opacity: 0.75;
+  }
+
+  .setup-card {
+    background: rgba(8,20,40,0.85);
+    border: 1px solid rgba(26,127,224,0.22);
+    border-radius: 4px;
+    padding: 2rem 2rem 2rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    position: relative;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 60px rgba(26,127,224,0.12), inset 0 0 40px rgba(26,127,224,0.03);
+  }
+
+  /* Corner accents */
+  .setup-card::before, .setup-card::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--b3);
+    border-style: solid;
+    opacity: 0.6;
+  }
+
+  .setup-card::before {
+    top: -1px; left: -1px;
+    border-width: 2px 0 0 2px;
+    border-radius: 4px 0 0 0;
+  }
+
+  .setup-card::after {
+    bottom: -1px; right: -1px;
+    border-width: 0 2px 2px 0;
+    border-radius: 0 0 4px 0;
+  }
+
+  .setup-card label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--b4);
+    opacity: 0.7;
+    display: block;
+    margin-bottom: 0.45rem;
+  }
+
+  .setup-card input {
+    width: 100%;
+    background: rgba(4,12,24,0.9);
+    border: 1px solid rgba(26,127,224,0.2);
+    border-radius: 3px;
+    padding: 0.8rem 1rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .setup-card input:focus {
+    border-color: var(--b3);
+    box-shadow: 0 0 0 2px rgba(26,127,224,0.15), 0 0 16px rgba(26,127,224,0.1);
+  }
+
+  .setup-card input::placeholder { color: rgba(170,216,255,0.25); font-style: italic; }
+
+  .group-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.45rem;
+  }
+
+  .group-label-row label { margin-bottom: 0; }
+
+  .group-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+  }
+
+  .group-btn {
+    aspect-ratio: 1;
+    border: 1px solid rgba(26,127,224,0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 400;
+    color: rgba(170,216,255,0.45);
+    background: rgba(4,12,24,0.8);
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+  }
+
+  .group-btn:hover {
+    border-color: var(--b3);
+    color: var(--b4);
+    background: rgba(26,127,224,0.08);
+  }
+
+  .group-btn.selected {
+    background: rgba(26,127,224,0.18);
+    border-color: var(--b4);
+    color: var(--b4);
+    box-shadow: 0 0 12px rgba(26,127,224,0.35), inset 0 0 8px rgba(26,127,224,0.1);
+  }
+
+  .btn-primary {
+    padding: 0.9rem 2rem;
+    border-radius: 3px;
+    border: 1px solid var(--b3);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    background: rgba(26,127,224,0.12);
+    color: var(--b4);
+    transition: all 0.25s;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(26,127,224,0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .btn-primary:hover {
+    background: rgba(26,127,224,0.22);
+    box-shadow: 0 0 24px rgba(26,127,224,0.35);
+    letter-spacing: 0.4em;
+  }
+
+  .btn-primary:hover::before { transform: translateX(100%); }
+
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 1;
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .title-word {
+    display: block;
+    font-family: var(--font-head);
+    font-size: clamp(4rem, 13vw, 10rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+    background: linear-gradient(135deg, var(--g3) 0%, var(--accent1) 35%, var(--b3) 65%, var(--b4) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 50px rgba(26,127,224,0.28));
+  }
+
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 0.85rem;
+  }
+
+  .topic-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(26,127,224,0.10);
+    border: 1px solid rgba(26,127,224,0.25);
+    border-radius: 50px;
+    padding: 0.35rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent1);
+    margin-top: 1rem;
+  }
+
+  /* ── MAIN APP ── */
+  #app {
+    display: none;
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 0.4rem 1rem 0.4rem 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+
+  .user-badge .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent1);
+    box-shadow: 0 0 8px var(--accent1);
+    animation: breathe 2.5s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-ghost:hover { border-color: var(--warn); color: var(--warn); }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 6rem; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid;
+  }
+
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    opacity: 0.4;
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  #section-q1 .section-header { border-color: var(--g3); }
+  #section-q1 .section-title { color: var(--g3); }
+  #section-q1 .section-num { color: var(--g3); }
+
+  #section-sketches .section-header { border-color: var(--accent1); }
+  #section-sketches .section-title { color: var(--accent1); }
+  #section-sketches .section-num { color: var(--accent1); }
+
+  #section-summary .section-header { border-color: var(--b3); }
+  #section-summary .section-title { color: var(--b3); }
+  #section-summary .section-num { color: var(--b3); }
+
+  #section-themes .section-header { border-color: var(--br3); }
+  #section-themes .section-title { color: var(--br3); }
+  #section-themes .section-num { color: var(--br3); }
+
+  #section-final .section-header { border-color: var(--b4); }
+  #section-final .section-title { color: var(--b4); }
+  #section-final .section-num { color: var(--b4); }
+
+  #section-synthesis .section-header { border-color: var(--accent1); }
+  #section-synthesis .section-title { color: var(--accent1); }
+  #section-synthesis .section-num { color: var(--accent1); }
+
+  /* ── QUESTION 1: NATURAL IMAGE + TECHNOLOGY ── */
+  .q1-intro {
+    background: linear-gradient(135deg, rgba(8,58,107,0.30), rgba(8,58,107,0.2));
+    border: 1px solid rgba(26,127,224,0.20);
+    border-radius: 18px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .q1-intro p { color: var(--muted); font-size: 0.875rem; line-height: 1.75; }
+  .q1-intro strong { color: var(--g4); }
+
+  /* Natural image grid */
+  .natural-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .nat-img-card {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: var(--surface2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.5rem 0.5rem;
+    gap: 0.4rem;
+    min-height: 90px;
+  }
+
+  .nat-img-card:hover { border-color: var(--b3); transform: translateY(-2px); background: rgba(26,127,224,0.06); }
+  .nat-img-card.selected {
+    border-color: var(--accent1);
+    box-shadow: 0 0 20px rgba(26,127,224,0.45);
+    transform: translateY(-3px);
+    background: rgba(26,127,224,0.10);
+  }
+
+  .nat-img-card .nat-img-check {
+    position: absolute; top: 4px; right: 4px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent1);
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 0.6rem; color: #040e1c; font-weight: 900;
+    z-index: 2;
+  }
+
+  .nat-img-card.selected .nat-img-check { display: flex; }
+
+  .nat-img-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .nat-img-label {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: center;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .nat-img-link {
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    color: var(--b4);
+    text-decoration: none;
+    opacity: 0.7;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(112,196,255,0.2);
+    border-radius: 3px;
+    padding: 0.15rem 0.4rem;
+    transition: opacity 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+
+  .nat-img-link:hover { opacity: 1; background: rgba(112,196,255,0.1); }
+
+
+  .selected-natural-display {
+    background: var(--surface);
+    border: 1px solid rgba(26,127,224,0.28);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: none;
+  }
+
+  .selected-natural-display.visible { display: block; }
+
+  .selected-nat-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .selected-nat-title {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--g4);
+    margin-bottom: 0.4rem;
+  }
+
+  .selected-nat-name {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .selected-nat-wiki-link {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--b4);
+    text-decoration: none;
+    border: 1px solid rgba(112,196,255,0.25);
+    border-radius: 4px;
+    padding: 0.3rem 0.75rem;
+    white-space: nowrap;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  .selected-nat-wiki-link:hover { background: rgba(112,196,255,0.1); }
+
+  /* Instruction steps */
+  .nat-instructions-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .nat-inst-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .nat-inst-step strong { color: var(--b4); }
+
+  .nat-inst-num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--b3);
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+  }
+
+  /* Image upload inside selected natural panel */
+  .nat-upload-section { margin-bottom: 1.25rem; }
+
+  .nat-upload-label, .nat-research-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .nat-upload-label { color: var(--b4); }
+  .nat-research-label { color: var(--g4); }
+
+  .nat-upload-zone {
+    border: 2px dashed rgba(26,127,224,0.22);
+    border-radius: 10px;
+    position: relative;
+    background: var(--surface2);
+    transition: border-color 0.2s, background 0.2s;
+    min-height: 90px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .nat-upload-zone:hover {
+    border-color: var(--b3);
+    background: rgba(26,127,224,0.04);
+  }
+
+  .nat-upload-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; z-index: 2;
+  }
+
+  .nat-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    min-height: 90px;
+  }
+
+  .nat-upload-placeholder small { opacity: 0.55; font-size: 0.72rem; font-family: var(--font-mono); }
+
+  .nat-img-preview {
+    width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    display: block;
+    background: var(--surface3);
+  }
+
+  .nat-img-preview-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .nat-img-remove-btn {
+    background: none; border: none;
+    color: var(--warn); cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.6rem;
+    opacity: 0.6; transition: opacity 0.2s; padding: 0;
+  }
+  .nat-img-remove-btn:hover { opacity: 1; }
+
+  /* Research notes */
+  .nat-research-section {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+  }
+
+  .nat-research-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .nat-research-prompt {
+    font-family: var(--font-mono);
+    font-size: 0.57rem;
+    color: var(--b3);
+    border: 1px solid rgba(32,144,240,0.2);
+    border-radius: 3px;
+    padding: 0.2rem 0.55rem;
+    opacity: 0.85;
+  }
+
+  .nat-research-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    resize: vertical;
+    min-height: 110px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .nat-research-textarea:focus {
+    border-color: var(--g3);
+    box-shadow: 0 0 0 3px rgba(26,127,224,0.08);
+  }
+
+  .nat-research-others-entry {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .nat-research-others-name {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--g4);
+    margin-bottom: 0.4rem;
+  }
+
+  .nat-research-others-text {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .nat-research-others-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 6px;
+    margin-top: 0.65rem;
+    background: var(--surface3);
+    display: block;
+  }
+
+  /* Technology selection */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .tech-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .tech-card:hover { border-color: var(--b3); }
+  .tech-card.selected {
+    border-color: var(--b4);
+    background: rgba(40,168,240,0.07);
+    box-shadow: 0 0 20px rgba(40,168,240,0.2);
+  }
+
+  .tech-card-check {
+    position: absolute; top: 10px; right: 10px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--b4);
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #040e1c; font-weight: 900;
+  }
+
+  .tech-card.selected .tech-card-check { display: flex; }
+
+  .tech-card-name {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--b4);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    padding-right: 28px;
+  }
+
+  .tech-card-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+  }
+
+  .tech-card-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .tech-link {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--b3);
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.15s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tech-link:hover { opacity: 1; text-decoration: underline; }
+
+  .tech-artist-example {
+    font-size: 0.75rem;
+    color: rgba(180,245,210,0.35);
+    line-height: 1.55;
+    font-style: italic;
+    margin-bottom: 0.6rem;
+    border-left: 2px solid rgba(26,127,224,0.20);
+    padding-left: 0.6rem;
+  }
+
+  /* Selected tech info panel */
+  .selected-tech-panel {
+    background: linear-gradient(135deg, rgba(8,58,107,0.3), rgba(8,58,107,0.30));
+    border: 1px solid rgba(40,168,240,0.25);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: none;
+  }
+
+  .selected-tech-panel.visible { display: block; }
+
+  .selected-tech-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--b4);
+    margin-bottom: 0.5rem;
+  }
+
+  .selected-tech-name {
+    font-family: var(--font-head);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .selected-tech-desc {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  .selected-tech-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  .selected-tech-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(40,168,240,0.12);
+    border: 1px solid rgba(40,168,240,0.25);
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--b4);
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .selected-tech-link:hover { background: rgba(40,168,240,0.22); }
+
+  /* ── THEME SELECTION ── */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .theme-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .theme-card:hover { border-color: var(--br3); }
+  .theme-card.selected {
+    border-color: var(--br4);
+    background: rgba(26,127,224,0.10);
+    box-shadow: 0 0 20px rgba(26,127,224,0.22);
+  }
+
+  .theme-card-check {
+    position: absolute; top: 10px; right: 10px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--br4);
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #040e1c; font-weight: 900;
+  }
+
+  .theme-card.selected .theme-card-check { display: flex; }
+
+  .theme-card-name {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--br4);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    padding-right: 28px;
+  }
+
+  .theme-card-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 0.6rem;
+  }
+
+  .theme-link {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--br3);
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.15s;
+  }
+
+  .theme-link:hover { opacity: 1; text-decoration: underline; }
+
+  /* Selected theme panel */
+  .selected-theme-panel {
+    background: linear-gradient(135deg, rgba(8,42,82,0.40), rgba(8,58,107,0.30));
+    border: 1px solid rgba(26,127,224,0.28);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: none;
+  }
+
+  .selected-theme-panel.visible { display: block; }
+  .selected-theme-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--br4);
+    margin-bottom: 0.5rem;
+  }
+  .selected-theme-name {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+  .selected-theme-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.7; }
+
+  /* ── UPLOAD ZONES ── */
+  .upload-zone {
+    border: 2px dashed rgba(26,127,224,0.25);
+    border-radius: 18px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    background: var(--surface);
+    margin-bottom: 2rem;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent1);
+    background: rgba(26,127,224,0.05);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0;
+    cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .upload-zone p { color: var(--muted); font-size: 0.875rem; line-height: 1.65; }
+
+  .count-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--g2), var(--accent1));
+    padding: 0.3rem 0.85rem;
+    border-radius: 50px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: #040e1c;
+    font-weight: 700;
+    margin-top: 0.75rem;
+  }
+
+  /* ── SKETCH CARDS ── */
+  .sketches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.75rem;
+  }
+
+  .sketch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .sketch-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 30px rgba(26,127,224,0.10);
+  }
+
+  .sketch-card .card-top {
+    height: 3px;
+    background: linear-gradient(90deg, var(--g2), var(--g3), var(--accent1), var(--b3), var(--b4));
+  }
+
+  .sketch-img {
+    width: 100%; max-height: 460px;
+    object-fit: contain; display: block;
+    background: var(--surface2);
+  }
+
+  .sketch-body { padding: 1.25rem; }
+
+  .sketch-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.85rem;
+  }
+
+  .sketch-author { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+  .sketch-num { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; color: var(--accent1); line-height: 1; }
+
+  .description-area {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.75rem; color: var(--text);
+    font-family: var(--font-body); font-size: 0.875rem;
+    resize: vertical; min-height: 80px; outline: none;
+    transition: border-color 0.2s; margin-bottom: 0.85rem;
+  }
+
+  .description-area:focus { border-color: var(--accent1); box-shadow: 0 0 0 3px rgba(26,127,224,0.10); }
+  .description-area:disabled { opacity: 0.55; cursor: default; }
+
+  .save-btn {
+    width: 100%; padding: 0.6rem; border-radius: 8px;
+    border: 1px solid var(--accent1);
+    background: rgba(26,127,224,0.10);
+    color: var(--accent1); cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    transition: all 0.2s; margin-bottom: 0.5rem;
+  }
+
+  .save-btn:hover { background: rgba(26,127,224,0.20); }
+
+  .likes-container { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  .likes-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--b4); margin-bottom: 0.75rem; }
+
+  .like-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    background: rgba(109,212,255,0.08);
+    border: 1px solid rgba(109,212,255,0.2);
+    border-radius: 50px; padding: 0.3rem 0.65rem;
+    font-size: 0.78rem; margin: 0.2rem; line-height: 1.3;
+  }
+
+  .like-chip-author { font-family: var(--font-mono); font-size: 0.58rem; color: var(--b4); opacity: 0.7; }
+
+  .like-input-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+
+  .like-input {
+    flex: 1; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.6rem 0.75rem; color: var(--text);
+    font-family: var(--font-body); font-size: 0.85rem;
+    outline: none; transition: border-color 0.2s;
+  }
+
+  .like-input:focus { border-color: var(--b3); }
+
+  .like-add-btn {
+    padding: 0.6rem 1rem; border-radius: 8px;
+    border: 1px solid var(--b3);
+    background: rgba(40,168,240,0.1);
+    color: var(--b4); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s; white-space: nowrap;
+    font-family: var(--font-mono); font-size: 0.68rem;
+  }
+
+  .like-add-btn:hover { background: rgba(40,168,240,0.2); }
+
+  /* Summary */
+  .summary-grid { display: grid; gap: 1.5rem; }
+
+  .summary-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem;
+    border-left: 4px solid var(--accent1);
+  }
+
+  .summary-item:nth-child(2n) { border-left-color: var(--b3); }
+  .summary-item:nth-child(3n) { border-left-color: var(--g4); }
+
+  .summary-sketch-title { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text); }
+  .summary-likes-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .summary-likes-list li { background: var(--surface2); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.84rem; line-height: 1.4; border: 1px solid var(--border); }
+  .summary-likes-list li span { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); display: block; margin-top: 0.1rem; }
+
+  /* Final card */
+  .final-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+
+  .final-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+
+  .final-q { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent1); }
+  .final-q-desc { color: var(--muted); font-size: 0.875rem; line-height: 1.7; margin-bottom: 1.5rem; }
+
+  .my-response-box {
+    background: var(--surface2);
+    border: 1px solid rgba(26,127,224,0.18);
+    border-radius: 14px; padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex; flex-direction: column; gap: 0.65rem;
+  }
+
+  .my-resp-label { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent1); }
+
+  .my-resp-input {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.75rem; color: var(--text);
+    font-family: var(--font-body); font-size: 0.9rem;
+    line-height: 1.65; resize: vertical; min-height: 90px;
+    outline: none; transition: border-color 0.2s;
+  }
+
+  .my-resp-input:focus { border-color: var(--accent1); box-shadow: 0 0 0 3px rgba(26,127,224,0.10); }
+
+  .responses-divider {
+    display: flex; align-items: center; gap: 1rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .responses-divider::before, .responses-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .responses-divider span { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+
+  .all-resp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+
+  .resp-entry {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem;
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+
+  .resp-entry.resp-mine { border-color: rgba(26,127,224,0.35); background: rgba(26,127,224,0.06); }
+  .resp-entry-name { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; color: var(--accent1); }
+  .resp-entry-text { font-size: 0.875rem; line-height: 1.65; color: var(--text); white-space: pre-wrap; }
+
+  .resp-delete-btn {
+    margin-top: 0.35rem; background: none; border: none;
+    color: var(--warn); font-family: var(--font-mono);
+    font-size: 0.6rem; letter-spacing: 0.1em; cursor: pointer;
+    opacity: 0.4; text-align: left; padding: 0; transition: opacity 0.2s;
+  }
+
+  .resp-delete-btn:hover { opacity: 1; }
+
+  .save-response-btn {
+    padding: 0.5rem; border-radius: 8px;
+    border: 1px solid var(--accent1);
+    background: rgba(26,127,224,0.10);
+    color: var(--accent1); cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .save-response-btn:hover { background: rgba(26,127,224,0.20); }
+  .no-responses-yet { color: var(--muted); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0; }
+
+  /* Synthesis */
+  .synthesis-intro-card {
+    background: linear-gradient(135deg, rgba(8,58,107,0.30), rgba(8,58,107,0.2));
+    border: 1px solid rgba(26,127,224,0.18);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    font-size: 0.875rem; line-height: 1.75; color: var(--muted);
+  }
+
+  .synthesis-intro-card strong { color: var(--g4); }
+
+  .synthesis-person-card {
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 20px; padding: 2rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden; transition: border-color 0.3s;
+  }
+
+  .synthesis-person-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--g2), var(--accent1), var(--b3));
+  }
+
+  .synthesis-person-card.is-mine { border-color: rgba(26,127,224,0.35); }
+  .synthesis-person-name { font-family: var(--font-head); font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.25rem; color: var(--accent1); }
+  .synthesis-person-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.25rem; }
+
+  .synthesis-text-display {
+    font-size: 0.9rem; line-height: 1.8; color: var(--text);
+    white-space: pre-wrap; background: var(--surface2);
+    border-radius: 10px; padding: 1rem; min-height: 60px;
+    border: 1px solid var(--border);
+  }
+
+  .synthesis-text-display.empty-display { color: var(--muted); font-style: italic; font-size: 0.875rem; }
+
+  .synthesis-my-section { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .synthesis-textarea {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; color: var(--text);
+    font-family: var(--font-body); font-size: 0.9rem;
+    line-height: 1.75; resize: vertical; min-height: 140px;
+    outline: none; transition: border-color 0.2s;
+  }
+
+  .synthesis-textarea:focus { border-color: var(--accent1); box-shadow: 0 0 0 3px rgba(26,127,224,0.10); }
+
+  .synthesis-save-btn {
+    align-self: flex-start; padding: 0.6rem 1.5rem;
+    border-radius: 10px; border: 1px solid var(--accent1);
+    background: rgba(26,127,224,0.12); color: var(--accent1);
+    cursor: pointer; font-family: var(--font-mono);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; transition: all 0.2s;
+  }
+
+  .synthesis-save-btn:hover { background: rgba(26,127,224,0.20); }
+
+  .synthesis-remove-btn {
+    background: none; border: none; color: var(--warn);
+    font-family: var(--font-mono); font-size: 0.6rem;
+    letter-spacing: 0.1em; cursor: pointer; opacity: 0.4;
+    padding: 0; transition: opacity 0.2s; align-self: flex-start;
+  }
+
+  .synthesis-remove-btn:hover { opacity: 1; }
+
+  /* Export button */
+  .btn-export {
+    background: linear-gradient(135deg, var(--g2), var(--accent1));
+    border: none; border-radius: 8px;
+    color: #040e1c; padding: 0.5rem 1.1rem;
+    cursor: pointer; font-family: var(--font-mono);
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-export:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,127,224,0.40); }
+  .btn-export:disabled { opacity: 0.5; cursor: wait; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 200;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2rem; width: 100%;
+    max-width: 400px; display: flex; flex-direction: column; gap: 1rem;
+  }
+
+  .modal h3 { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; color: var(--warn); }
+  .modal p { color: var(--muted); font-size: 0.875rem; line-height: 1.65; }
+
+  .modal input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    color: var(--text); font-family: var(--font-body);
+    font-size: 1rem; outline: none; width: 100%;
+    transition: border-color 0.2s;
+  }
+
+  .modal input:focus { border-color: var(--warn); }
+  .modal-btns { display: flex; gap: 0.75rem; }
+
+  .btn-danger {
+    flex: 1; padding: 0.75rem; border-radius: 10px;
+    border: 1px solid var(--warn);
+    background: rgba(232,90,42,0.12); color: var(--warn);
+    cursor: pointer; font-family: var(--font-mono);
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.2s;
+  }
+
+  .btn-danger:hover { background: rgba(232,90,42,0.22); }
+
+  .btn-cancel {
+    flex: 1; padding: 0.75rem; border-radius: 10px;
+    border: 1px solid var(--border); background: none;
+    color: var(--muted); cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.72rem;
+    font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; transition: all 0.2s;
+  }
+
+  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.9rem 1.25rem;
+    font-family: var(--font-mono); font-size: 0.78rem;
+    z-index: 300; transform: translateY(100px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 300px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--accent1); color: var(--accent1); }
+  .toast.error { border-color: var(--warn); color: var(--warn); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 4rem 2rem;
+    color: var(--muted); background: var(--surface);
+    border-radius: 16px; border: 1px dashed var(--border);
+  }
+
+  .empty-state .e-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+  .empty-state p { font-size: 0.875rem; line-height: 1.65; }
+
+  .delete-sketch-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(232,90,42,0.85); border: none;
+    color: white; border-radius: 50%;
+    width: 26px; height: 26px; cursor: pointer;
+    font-size: 0.72rem; display: flex;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s; z-index: 10;
+  }
+
+  .sketch-card:hover .delete-sketch-btn.visible { opacity: 1; }
+
+  #config-notice {
+    background: rgba(255,214,10,0.06);
+    border: 1px solid rgba(255,214,10,0.25);
+    border-radius: 12px; padding: 1rem 1.25rem;
+    margin: 1rem 2rem; font-size: 0.82rem;
+    line-height: 1.65; position: relative; z-index: 1; display: none;
+  }
+
+  #config-notice strong { color: #ffd60a; }
+  #config-notice code { font-family: var(--font-mono); font-size: 0.72rem; background: rgba(0,0,0,0.3); padding: 0.1em 0.4em; border-radius: 4px; color: var(--g4); }
+
+  .autosave-indicator {
+    font-family: var(--font-mono); font-size: 0.6rem;
+    letter-spacing: 0.12em; color: var(--accent1);
+    opacity: 0; transition: opacity 0.4s ease;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+  }
+
+  .autosave-indicator.visible { opacity: 0.7; }
+  .autosave-indicator::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent1); animation: breathe 1.5s ease-in-out infinite; }
+
+  @media (max-width: 600px) {
+    .group-grid { grid-template-columns: repeat(5, 1fr); }
+    header { padding: 2rem 1rem 1.5rem; }
+    #app { padding: 1rem; }
+    .sketches-grid { grid-template-columns: 1fr; }
+    .natural-images-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); }
+    .tech-grid, .theme-grid { grid-template-columns: 1fr; }
+  }
+
+  /* AI DISCLAIMER */
+  #ai-disclaimer {
+    position: relative; z-index: 1; margin-top: 4rem;
+    border-top: 1px solid var(--border); background: var(--surface);
+  }
+
+  .disclaimer-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 2.5rem 2rem; display: flex;
+    gap: 2rem; align-items: flex-start;
+  }
+
+  .disclaimer-icon { font-size: 1.75rem; flex-shrink: 0; color: var(--g4); opacity: 0.6; margin-top: 0.15rem; }
+  .disclaimer-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--g3); opacity: 0.7; margin-bottom: 1rem; }
+  .disclaimer-body p { color: rgba(232,242,255,0.45); font-size: 0.82rem; line-height: 1.8; margin-bottom: 0.85rem; max-width: 900px; }
+  .disclaimer-body p:last-child { margin-bottom: 0; }
+  .disclaimer-body strong { color: rgba(232,242,255,0.7); font-weight: 600; }
+
+  @media (max-width: 600px) { .disclaimer-inner { flex-direction: column; gap: 1rem; padding: 2rem 1rem; } }
+</style>
+</head>
+<body>
+
+<div class="nature-bar"></div>
+<div id="config-notice"></div>
+
+<!-- ── SETUP SCREEN ── -->
+<div id="setup-screen">
+  <canvas id="setup-canvas"></canvas>
+  <div class="setup-inner">
+    <div class="setup-eyebrow">Art 104 · Module 05</div>
+
+    <div class="setup-title-block">
+      <span class="setup-title-digital">Digital Brainstorming Tool</span>
+      <span class="setup-title-main">ABOUT<br>NATURE</span>
+      <span class="setup-title-about">ecology · biology · environment</span>
+    </div>
+
+    <div class="setup-divider">
+      <div class="setup-divider-line"></div>
+      <div class="setup-divider-node"></div>
+      <div class="setup-divider-line"></div>
+    </div>
+
+    <div class="setup-tags">
+      <span class="setup-tag">Cells</span>
+      <span class="setup-tag">Organisms</span>
+      <span class="setup-tag">Molecules</span>
+      <span class="setup-tag">Ecosystems</span>
+      <span class="setup-tag">Technology</span>
+      <span class="setup-tag">Speculative Art</span>
+    </div>
+
+    <div class="setup-card">
+      <div>
+        <label>Your Name</label>
+        <input type="text" id="user-name-input" placeholder="enter your name..." maxlength="30" />
+      </div>
+      <div>
+        <div class="group-label-row">
+          <label>Select Your Group</label>
+        </div>
+        <div class="group-grid">
+          <button class="group-btn" data-g="1" onclick="selectGroup(1)">01</button>
+          <button class="group-btn" data-g="2" onclick="selectGroup(2)">02</button>
+          <button class="group-btn" data-g="3" onclick="selectGroup(3)">03</button>
+          <button class="group-btn" data-g="4" onclick="selectGroup(4)">04</button>
+          <button class="group-btn" data-g="5" onclick="selectGroup(5)">05</button>
+          <button class="group-btn" data-g="6" onclick="selectGroup(6)">06</button>
+          <button class="group-btn" data-g="7" onclick="selectGroup(7)">07</button>
+          <button class="group-btn" data-g="8" onclick="selectGroup(8)">08</button>
+          <button class="group-btn" data-g="9" onclick="selectGroup(9)">09</button>
+          <button class="group-btn" data-g="10" onclick="selectGroup(10)">10</button>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="enterApp()">→ &nbsp; Enter Workspace</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<header>
+  <span class="title-word" style="font-size:clamp(0.9rem,3vw,1.5rem);letter-spacing:0.45em;font-weight:100;opacity:0.5;display:block;margin-bottom:0.15rem;">DIGITAL BRAINSTORMING TOOL</span>
+  <span class="title-word">ABOUT NATURE</span>
+  <p class="subtitle">Collaborative Speculative Artwork Development</p>
+  <div>
+    <span class="topic-tag">🔬 Nature · Ecology · Biology · Environment</span>
+  </div>
+</header>
+
+<div id="app">
+  <div class="top-bar">
+    <div id="user-badge" class="user-badge">
+      <span class="dot"></span>
+      <span id="badge-text">—</span>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn-export" id="export-btn" onclick="exportPDF()">⬇ Export Group PDF</button>
+      <button class="btn-ghost" onclick="openResetModal()">⟳ Reset Group Data</button>
+      <button class="btn-ghost" onclick="returnToSetup()">← Change User</button>
+    </div>
+  </div>
+
+  <!-- SECTION 01: NATURAL IMAGE + TECHNOLOGY -->
+  <section id="section-q1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">NATURAL IMAGE + TECHNOLOGY</span>
+    </div>
+
+    <div class="q1-intro">
+      <p><strong>Step 1:</strong> As a group, select one image from the 100 natural images below — cells, flowers, microscopic organisms, molecules, and more. Then <strong>Step 2:</strong> select one technology. Your task is to combine the aesthetic, formal, or conceptual aspects of your chosen natural image with that technology to generate a speculative artwork idea.</p>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g4);margin-bottom:0.5rem;">Step 1 — Choose a Natural Thing</div>
+      <div class="nat-instructions-box">
+        <div class="nat-inst-step">
+          <span class="nat-inst-num">①</span>
+          <span>Browse the 100 cards below. Click <strong>↗ see image</strong> on any card to open its Wikipedia page in a new tab.</span>
+        </div>
+        <div class="nat-inst-step">
+          <span class="nat-inst-num">②</span>
+          <span>On the Wikipedia page, <strong>save the image</strong> to your device (right-click → Save image as…).</span>
+        </div>
+        <div class="nat-inst-step">
+          <span class="nat-inst-num">③</span>
+          <span><strong>Read a little</strong> about it — what is its structure? What does it do for the environment or ecosystem? Take some notes below.</span>
+        </div>
+        <div class="nat-inst-step">
+          <span class="nat-inst-num">④</span>
+          <span>Click a card to <strong>select</strong> it, then upload your saved image and add your research notes in the panel that appears.</span>
+        </div>
+      </div>
+      <div class="natural-images-grid" id="natural-images-grid"></div>
+    </div>
+
+    <!-- Expanded selected natural panel with upload + research -->
+    <div id="selected-natural-display" class="selected-natural-display">
+      <div class="selected-nat-header">
+        <div>
+          <div class="selected-nat-title">Selected Natural Image</div>
+          <div class="selected-nat-name" id="selected-nat-name">—</div>
+        </div>
+        <a class="selected-nat-wiki-link" id="selected-nat-wiki-link" href="#" target="_blank" rel="noopener">↗ Open Wikipedia page</a>
+      </div>
+
+      <!-- Upload the saved image -->
+      <div class="nat-upload-section">
+        <div class="nat-upload-label">📎 Upload your saved image of this natural thing</div>
+        <div class="nat-upload-zone" id="nat-img-upload-zone">
+          <input type="file" id="nat-img-file-input" accept="image/*" onchange="handleNatImageUpload(event)" />
+          <div id="nat-img-preview-wrap">
+            <div class="nat-upload-placeholder">
+              <span style="font-size:1.75rem;">🖼️</span>
+              <span>Click or drag to upload your saved image</span>
+              <small>Save from Wikipedia, then upload here</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Research notes -->
+      <div class="nat-research-section">
+        <div class="nat-research-label">📖 Your research notes — what did you learn?</div>
+        <div class="nat-research-prompts">
+          <span class="nat-research-prompt">What is its structure or form?</span>
+          <span class="nat-research-prompt">What does it do for the environment?</span>
+          <span class="nat-research-prompt">What surprised you about it?</span>
+        </div>
+        <textarea class="nat-research-textarea" id="nat-research-notes"
+          placeholder="e.g. Mycelium forms vast underground networks connecting tree roots, allowing forests to share nutrients and chemical signals across huge distances. The branching structure looks like neural networks or the internet..."></textarea>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-top:0.6rem;">
+          <button class="save-response-btn" style="border-color:var(--g4);color:var(--g4);" onclick="saveNatResearch()">Save Research Notes</button>
+          <span class="autosave-indicator" id="nat-research-autosave"> draft saved</span>
+        </div>
+
+        <!-- Other members' notes -->
+        <div id="nat-research-others" style="margin-top:1.25rem;"></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--b4);margin-bottom:0.75rem;">Step 2 — Select a Technology</div>
+      <div class="tech-grid" id="tech-grid"></div>
+    </div>
+
+    <div id="selected-tech-panel" class="selected-tech-panel">
+      <div class="selected-tech-label">Selected Technology</div>
+      <div class="selected-tech-name" id="selected-tech-name">—</div>
+      <div class="selected-tech-desc" id="selected-tech-desc"></div>
+      <div class="selected-tech-links" id="selected-tech-links"></div>
+    </div>
+
+    <div class="my-response-box" style="margin-top:1.5rem;">
+      <div class="my-resp-label" style="color:var(--g4);">✏ Combine them — Write how you'd merge this natural image with the technology</div>
+      <textarea class="my-resp-input" id="cmytxt-nattech" placeholder="Describe how the aesthetic, formal, or conceptual qualities of your chosen natural image could be combined with your chosen technology to create a speculative artwork..."></textarea>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <button class="save-response-btn" style="border-color:var(--g4);color:var(--g4);" onclick="saveCombineResponse('nattech')">Save My Response</button>
+        <span class="autosave-indicator"> draft saved</span>
+      </div>
+    </div>
+    <div id="callresp-nattech">
+      <p class="no-responses-yet">No responses yet — be the first!</p>
+    </div>
+
+    <!-- Sketch / Mood upload for Q1 -->
+    <div style="margin-top:2rem;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g4);margin-bottom:0.75rem;">Upload Sketches, Mood & Inspiration Images</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)" />
+        <div class="upload-icon">✏️</div>
+        <p>Drop an image or click to upload a sketch or inspiration image<br><small style="opacity:0.55">PNG, JPG, GIF, WEBP</small></p>
+        <span class="count-badge" id="sketch-count-badge">0 / 20 images</span>
+      </div>
+      <div class="sketches-grid" id="sketches-grid"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 02: THEMES -->
+  <section id="section-themes">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">SELECT A THEME</span>
+    </div>
+    <p style="color:var(--muted);font-size:0.875rem;line-height:1.75;margin-bottom:1.5rem;">
+      Now combine your natural image + technology choice with one of the themes below to guide the conceptual direction of your speculative artwork.
+    </p>
+    <div class="theme-grid" id="theme-grid"></div>
+    <div id="selected-theme-panel" class="selected-theme-panel">
+      <div class="selected-theme-label">Selected Theme</div>
+      <div class="selected-theme-name" id="selected-theme-name">—</div>
+      <div class="selected-theme-desc" id="selected-theme-desc"></div>
+    </div>
+    <div class="my-response-box" style="margin-top:1.5rem;">
+      <div class="my-resp-label" style="color:var(--br4);">✏ How does this theme shape your artwork idea?</div>
+      <textarea class="my-resp-input" id="cmytxt-theme" placeholder="Describe how your selected theme connects to and deepens the combination of your natural image and technology..."></textarea>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <button class="save-response-btn" style="border-color:var(--br4);color:var(--br4);" onclick="saveCombineResponse('theme')">Save My Response</button>
+        <span class="autosave-indicator"> draft saved</span>
+      </div>
+    </div>
+    <div id="callresp-theme">
+      <p class="no-responses-yet">No responses yet — be the first!</p>
+    </div>
+  </section>
+
+  <!-- SECTION 03: What We Love -->
+  <section id="section-summary">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">WHAT WE LOVE</span>
+    </div>
+    <p style="color:var(--muted);font-size:0.875rem;line-height:1.75;margin-bottom:1.5rem;">
+      All the things your group liked about the uploaded sketches and inspiration images. Use these to inspire what comes next.
+    </p>
+    <div id="summary-grid" class="summary-grid">
+      <div class="empty-state"><div class="e-icon">🌱</div><p>Likes from uploaded images will appear here automatically.</p></div>
+    </div>
+  </section>
+
+  <!-- SECTION 04: Speculative Artwork Idea -->
+  <section id="section-final">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">SPECULATIVE ARTWORK IDEA</span>
+    </div>
+    <p style="color:var(--muted);font-size:0.875rem;line-height:1.75;margin-bottom:2rem;">
+      Combine everything — the natural image, the technology, the theme, your sketches, and your group's discussion — into a speculative artwork idea. Each person writes their own vision.
+    </p>
+    <div id="final-cards"></div>
+  </section>
+
+  <!-- SECTION 05: Final Synthesis -->
+  <section id="section-synthesis">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">FINAL SYNTHESIS</span>
+    </div>
+    <p style="color:var(--muted);font-size:0.875rem;line-height:1.75;margin-bottom:2rem;">
+      Read everyone's ideas in Section 04. Now write your own complete, integrated synthesis for the final speculative artwork — weaving together the natural image, technology, theme, and your group's collective thinking.
+    </p>
+    <div id="synthesis-cards"></div>
+  </section>
+</div>
+
+<!-- Reset Modal -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal">
+    <h3>RESET GROUP</h3>
+    <p>This will permanently delete <strong id="reset-group-label">—</strong>'s sketches, selections, and responses.<br><br>
+    The password for your group is: <strong id="reset-pw-hint" style="color:var(--accent1);font-family:var(--font-mono);">—</strong></p>
+    <input type="password" id="reset-pw-input" placeholder="Enter group password..." />
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeResetModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmReset()">Reset Data</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA: NATURAL IMAGES (100 curated descriptions with Unsplash URLs)
+// ═══════════════════════════════════════════════════
+const NATURAL_IMAGES = [
+  { id:'ni01', label:'Red Blood Cells', search:'red blood cells microscope' },
+  { id:'ni02', label:'Diatoms', search:'diatom algae microscope' },
+  { id:'ni03', label:'Mitosis', search:'mitosis cell division microscope' },
+  { id:'ni04', label:'Neuron Network', search:'neuron dendrites microscope' },
+  { id:'ni05', label:'Pollen Grain (SEM)', search:'pollen grain scanning electron microscope' },
+  { id:'ni06', label:'Radiolaria', search:'radiolaria haeckel' },
+  { id:'ni07', label:'Tardigrade', search:'tardigrade water bear microscope' },
+  { id:'ni08', label:'Snowflake Crystal', search:'snowflake crystal macro photograph' },
+  { id:'ni09', label:'Mycelium', search:'mycelium fungus network' },
+  { id:'ni10', label:'DNA Double Helix', search:'DNA double helix model' },
+  { id:'ni11', label:'Sunflower Spiral', search:'sunflower fibonacci spiral closeup' },
+  { id:'ni12', label:'Protea Flower', search:'protea flower closeup' },
+  { id:'ni13', label:'Lotus Flower', search:'lotus flower cross section' },
+  { id:'ni14', label:'Venus Flytrap', search:'venus flytrap dionaea' },
+  { id:'ni15', label:'Fern Frond Spiral', search:'fiddlehead fern frond spiral' },
+  { id:'ni16', label:'Orchid', search:'orchid flower macro' },
+  { id:'ni17', label:'Dahlia Close-Up', search:'dahlia flower closeup macro' },
+  { id:'ni18', label:'Romanesco Broccoli', search:'romanesco broccoli fractal' },
+  { id:'ni19', label:'Leaf Venation', search:'leaf venation skeleton macro' },
+  { id:'ni20', label:'Moss Spores', search:'moss spores closeup' },
+  { id:'ni21', label:'Nautilus Shell', search:'nautilus shell cross section spiral' },
+  { id:'ni22', label:'Butterfly Wing', search:'butterfly wing macro scales' },
+  { id:'ni23', label:'Coral Reef', search:'coral reef underwater' },
+  { id:'ni24', label:'Jellyfish', search:'jellyfish underwater ocean' },
+  { id:'ni25', label:'Peacock Feather', search:'peacock feather macro iridescent' },
+  { id:'ni26', label:'Starling Murmuration', search:'starling murmuration flock sky' },
+  { id:'ni27', label:'Spider Web with Dew', search:'spider web dew drops morning' },
+  { id:'ni28', label:'Sea Urchin', search:'sea urchin echinoderm spines' },
+  { id:'ni29', label:'Bioluminescent Plankton', search:'bioluminescent plankton ocean' },
+  { id:'ni30', label:'Ammonite Fossil', search:'ammonite fossil spiral' },
+  { id:'ni31', label:'Protein Structure', search:'protein structure molecular model' },
+  { id:'ni32', label:'Carbon Nanotube', search:'carbon nanotube molecular structure' },
+  { id:'ni33', label:'Ice Crystal', search:'ice crystal macro photograph' },
+  { id:'ni34', label:'Quartz Crystal', search:'quartz crystal mineral closeup' },
+  { id:'ni35', label:'Chlorophyll', search:'chlorophyll leaf pigment microscope' },
+  { id:'ni36', label:'Forest Canopy (Aerial)', search:'aerial forest canopy rainforest' },
+  { id:'ni37', label:'River Delta (Satellite)', search:'river delta aerial satellite view' },
+  { id:'ni38', label:'Glacier Surface', search:'glacier ice crevasse surface' },
+  { id:'ni39', label:'Mangrove Roots', search:'mangrove roots underwater aerial' },
+  { id:'ni40', label:'Tide Pool', search:'tide pool rocky shore' },
+  { id:'ni41', label:'Basalt Rock Formation', search:'basalt columns giant causeway rock' },
+  { id:'ni42', label:'Desert Sand Dunes', search:'sand dunes desert aerial' },
+  { id:'ni43', label:'Kelp Forest', search:'kelp forest underwater' },
+  { id:'ni44', label:'Aurora Borealis', search:'aurora borealis northern lights' },
+  { id:'ni45', label:'Tree Ring Cross-Section', search:'tree ring cross section annual' },
+  { id:'ni46', label:'Pinecone Fibonacci', search:'pinecone fibonacci spiral closeup' },
+  { id:'ni47', label:'Mussel Shell', search:'mussel shell texture pattern' },
+  { id:'ni48', label:'Dragonfly Wing', search:'dragonfly wing macro transparent' },
+  { id:'ni49', label:'Snakeskin Texture', search:'snakeskin texture scale pattern' },
+  { id:'ni50', label:'Cactus Spines', search:'cactus spines closeup macro' },
+  { id:'ni51', label:'Root Hair Cells', search:'root hair cells plant microscope' },
+  { id:'ni52', label:'Bacterium (SEM)', search:'bacteria scanning electron microscope' },
+  { id:'ni53', label:'Volcanic Lightning', search:'volcanic lightning eruption ash' },
+  { id:'ni54', label:'Ant Colony', search:'ant colony nest insects' },
+  { id:'ni55', label:'Wave Foam Pattern', search:'ocean wave foam closeup pattern' },
+  { id:'ni56', label:'Bone Structure', search:'bone trabeculae structure microscope' },
+  { id:'ni57', label:'Lava Flow', search:'lava flow volcanic magma' },
+  { id:'ni58', label:'Slime Mold Network', search:'slime mold physarum network' },
+  { id:'ni59', label:'Cephalopod Eye', search:'octopus eye closeup macro' },
+  { id:'ni60', label:'Lichen on Rock', search:'lichen rock surface pattern' },
+  { id:'ni61', label:'Frost Crystals', search:'frost crystals ice window' },
+  { id:'ni62', label:'Birch Bark', search:'birch tree bark texture closeup' },
+  { id:'ni63', label:'Dandelion Seeds', search:'dandelion seed clock macro' },
+  { id:'ni64', label:'Cuttlefish', search:'cuttlefish camouflage pattern skin' },
+  { id:'ni65', label:'Starfish', search:'starfish sea star closeup' },
+  { id:'ni66', label:'Hummingbird in Flight', search:'hummingbird wings flight macro' },
+  { id:'ni67', label:'Amethyst Geode', search:'amethyst geode crystal purple' },
+  { id:'ni68', label:'Termite Mound', search:'termite mound architecture structure' },
+  { id:'ni69', label:'Compound Eye', search:'compound eye insect dragonfly macro' },
+  { id:'ni70', label:'Mushroom Gills', search:'mushroom gills underside macro' },
+  { id:'ni71', label:'Honeycomb', search:'honeycomb bees wax hexagon closeup' },
+  { id:'ni72', label:'Autumn Leaf Litter', search:'autumn leaves macro closeup forest floor' },
+  { id:'ni73', label:'Rainforest Canopy', search:'rainforest canopy looking up trees' },
+  { id:'ni74', label:'Sunlight Through Water', search:'sunlight rays underwater ocean' },
+  { id:'ni75', label:'Antarctic Iceberg', search:'iceberg antarctica blue ice' },
+  { id:'ni76', label:'Soil Cross-Section', search:'soil profile cross section layers' },
+  { id:'ni77', label:'Sea Anemone', search:'sea anemone tentacles underwater' },
+  { id:'ni78', label:'Humpback Whale', search:'humpback whale tail fluke ocean' },
+  { id:'ni79', label:'Eel Grass', search:'seagrass eel grass underwater' },
+  { id:'ni80', label:'Zebra Stripes', search:'zebra stripes pattern closeup' },
+  { id:'ni81', label:'Grand Prismatic Spring', search:'grand prismatic spring yellowstone' },
+  { id:'ni82', label:'Seashell Interior', search:'seashell spiral interior macro' },
+  { id:'ni83', label:'Hydrothermal Vent', search:'hydrothermal vent black smoker deep sea' },
+  { id:'ni84', label:'Chrysalis', search:'chrysalis butterfly pupa transformation' },
+  { id:'ni85', label:'Peat Bog Moss', search:'sphagnum moss peat bog' },
+  { id:'ni86', label:'Tree Root Network', search:'tree roots network forest floor' },
+  { id:'ni87', label:'Coral Polyps', search:'coral polyps closeup macro' },
+  { id:'ni88', label:'Bird of Paradise Flower', search:'bird of paradise strelitzia flower' },
+  { id:'ni89', label:'Chambered Nautilus', search:'chambered nautilus shell cross section' },
+  { id:'ni90', label:'Virus (Electron Microscope)', search:'virus particle electron microscope colorized' },
+  { id:'ni91', label:'Magnetic Field Lines', search:'magnetic field iron filings pattern' },
+  { id:'ni92', label:'Fireflies', search:'fireflies bioluminescence night forest' },
+  { id:'ni93', label:'Birch Forest', search:'birch forest white trees winter' },
+  { id:'ni94', label:'Thermal Hot Spring', search:'hot spring thermal pool colorful' },
+  { id:'ni95', label:'Whale Shark', search:'whale shark underwater ocean' },
+  { id:'ni96', label:'Fungal Spores', search:'fungal spores mushroom macro closeup' },
+  { id:'ni97', label:'Coral Bleaching', search:'coral bleaching reef white' },
+  { id:'ni98', label:'Bees on Flower', search:'bees pollinating flower macro' },
+  { id:'ni99', label:'Volcanic Rock Texture', search:'volcanic basalt rock texture macro' },
+  { id:'ni100', label:'Deep Sea Creature', search:'deep sea bioluminescent creature' }
+];
+
+// ═══════════════════════════════════════════════════
+// DATA: TECHNOLOGIES
+// ═══════════════════════════════════════════════════
+const TECHNOLOGIES = [
+  {
+    id: 'bioinfo',
+    name: 'Bioinformatics & Genomic Sequencing',
+    desc: 'Computational tools that read, map, and interpret DNA — turning the code of living organisms into data that can be visualized, compared, and creatively repurposed.',
+    example: 'Eduardo Kac\'s Genesis (1999) translated a biblical gene into Morse code and embedded it in living bacteria, making genomic data a site of artistic and ethical intervention.',
+    links: [
+      { label: '▶ Eduardo Kac — Genesis (documentation)', url: 'http://www.ekac.org/geninfo.html' },
+      { label: '▸ Wikipedia: Bioinformatics', url: 'https://en.wikipedia.org/wiki/Bioinformatics' }
+    ]
+  },
+  {
+    id: 'enviot',
+    name: 'Environmental Sensors & IoT',
+    desc: 'Networks of physical devices — air quality monitors, soil probes, water sensors — that collect real-time ecological data and connect the living environment to digital systems.',
+    example: 'Natalie Jeremijenko\'s OneTrees (1999–2006) used cloned trees planted across San Francisco as living biological sensors, measuring environmental inequality across the city.',
+    links: [
+      { label: '▶ Natalie Jeremijenko — The art of the eco-mindshift (TED)', url: 'https://www.ted.com/talks/natalie_jeremijenko_the_art_of_the_eco_mindshift' },
+      { label: '▸ Wikipedia: Internet of Things', url: 'https://en.wikipedia.org/wiki/Internet_of_things' }
+    ]
+  },
+  {
+    id: 'satellite',
+    name: 'Satellite Imaging & Remote Sensing',
+    desc: 'Orbital and aerial technologies that capture the Earth\'s surface across wavelengths invisible to the human eye, revealing deforestation, glacial retreat, and ecosystem change from above.',
+    example: 'John Klima\'s ecosystm (2000) pulled live satellite and weather data to generate real-time 3D visualizations of global ecological systems as an aesthetic experience.',
+    links: [
+      { label: '▶ Google Earth Timelapse — 40 Years of Planetary Change', url: 'https://earthengine.google.com/timelapse/' },
+      { label: '▸ Wikipedia: Remote Sensing', url: 'https://en.wikipedia.org/wiki/Remote_sensing' }
+    ]
+  },
+  {
+    id: 'crispr',
+    name: 'CRISPR & Genetic Engineering',
+    desc: 'Precision tools for rewriting the genetic instructions of living organisms — raising urgent questions about who controls life, what counts as natural, and where biology ends and design begins.',
+    example: 'Critical Art Ensemble\'s Genterra (2002) staged public performances critiquing the biotech industry\'s control over genetically modified organisms and the food supply.',
+    links: [
+      { label: '▶ Kurzgesagt — CRISPR & the Future of Mankind (YouTube)', url: 'https://www.youtube.com/watch?v=jAhjPd4uNFY' },
+      { label: '▸ Wikipedia: CRISPR', url: 'https://en.wikipedia.org/wiki/CRISPR' }
+    ]
+  },
+  {
+    id: 'ecosim',
+    name: 'Ecological Simulation & Modeling',
+    desc: 'Computational models that replicate the behavior of ecosystems, populations, and climate systems — allowing scientists and artists to run, observe, and intervene in virtual natural worlds.',
+    example: 'Karl Sims\'s Galapagos (1997) used evolutionary algorithms to simulate competing virtual organisms, letting gallery visitors select which creatures survived and reproduced.',
+    links: [
+      { label: '▶ Karl Sims — Evolved Virtual Creatures (YouTube)', url: 'https://www.youtube.com/watch?v=JBgG_VSP7f8' },
+      { label: '▸ Wikipedia: Ecosystem Model', url: 'https://en.wikipedia.org/wiki/Ecosystem_model' }
+    ]
+  },
+  {
+    id: 'biomimicry',
+    name: 'Bio-inspired Design & Biomimicry',
+    desc: 'Design and engineering strategies that borrow from natural forms, processes, and systems — spider silk, termite ventilation, leaf photosynthesis — reimagining technology through the logic of evolution.',
+    example: 'Kenneth Rinaldo\'s Autopoiesis (2000) created a colony of fifteen robotic sculptures that communicated via the internet and adapted their behavior inspired by biological self-organization.',
+    links: [
+      { label: '▶ Janine Benyus — Biomimicry in action (TED)', url: 'https://www.ted.com/talks/janine_benyus_biomimicry_in_action' },
+      { label: '▸ Wikipedia: Biomimicry', url: 'https://en.wikipedia.org/wiki/Biomimicry' }
+    ]
+  },
+  {
+    id: 'drone',
+    name: 'Drone & Aerial Surveillance',
+    desc: 'Unmanned aerial vehicles used to monitor wildlife, map terrain, and document environmental change — tools that extend human vision into remote or inaccessible ecosystems.',
+    example: 'Tega Brain\'s Asunder (2019) used aerial imaging and algorithmic systems to expose the ecological contradictions embedded in infrastructure and land management decisions.',
+    links: [
+      { label: '▶ Tega Brain — Synthetic Messenger (Ars Electronica)', url: 'https://youtu.be/S0kqo3mfOns' },
+      { label: '▸ Wikipedia: Unmanned Aerial Vehicle', url: 'https://en.wikipedia.org/wiki/Unmanned_aerial_vehicle' }
+    ]
+  },
+  {
+    id: 'wearable',
+    name: 'Wearable Biosensors',
+    desc: 'Body-worn devices that measure physiological signals — heartbeat, sweat, breath, movement — blurring the boundary between organism and instrument, self and data.',
+    example: 'Sommerer & Mignonneau\'s Interactive Plant Growing (1992) used the human body\'s bioelectric field — measured through touch — as a sensor controlling the growth of virtual plant simulations.',
+    links: [
+      { label: '▶ Sommerer & Mignonneau — Interactive Plant Growing', url: 'http://www.interface.ufg.ac.at/christa-laurent/WORKS/FRAMES/FrameSet.html' },
+      { label: '▸ Wikipedia: Biosensor', url: 'https://en.wikipedia.org/wiki/Biosensor' }
+    ]
+  },
+  {
+    id: 'aiml',
+    name: 'AI & Machine Learning for Ecology',
+    desc: 'Algorithms trained on ecological datasets to identify species, predict climate patterns, detect poaching, and model biodiversity — intelligence applied to the more-than-human world.',
+    example: 'Refik Anadol\'s Large Nature Model (2024) trained a generative AI on vast datasets of biodiversity and natural imagery to produce immersive living visualizations of the Earth\'s ecosystems.',
+    links: [
+      { label: '▶ Refik Anadol — Large Nature Model', url: 'https://refikanadol.com/works/large-nature-model/' },
+      { label: '▸ Wikipedia: Machine Learning', url: 'https://en.wikipedia.org/wiki/Machine_learning' }
+    ]
+  },
+  {
+    id: 'synbio',
+    name: 'Synthetic Biology',
+    desc: 'Engineering entirely new biological parts, organisms, and systems that do not exist in nature — programming living cells like software to produce light, materials, or ecological functions.',
+    example: 'Oron Catts & Ionat Zurr (Tissue Culture & Art Project) grew semi-living sculptures from animal tissue in laboratory conditions, asking whether engineered biological matter constitutes a new form of life.',
+    links: [
+      { label: '▶ Catts & Zurr — Tissue Culture & Art Project', url: 'https://tcaproject.net/' },
+      { label: '▸ Wikipedia: Synthetic Biology', url: 'https://en.wikipedia.org/wiki/Synthetic_biology' }
+    ]
+  },
+  {
+    id: 'microscopy',
+    name: 'Microscopy & Imaging Technologies',
+    desc: 'Tools that make the invisible visible — electron microscopes, fluorescence imaging, and macro photography that reveal the architecture of cells, fungi, and organisms at scales beyond unaided perception.',
+    example: 'Sommerer & Mignonneau\'s A-Volve (1994–95) used microscopic-scale logic to render evolutionary creatures in a water-filled pool, their forms determined by visitor touch and biological growth rules.',
+    links: [
+      { label: '▶ Sommerer & Mignonneau — A-Volve', url: 'http://www.interface.ufg.ac.at/christa-laurent/WORKS/FRAMES/FrameSet.html' },
+      { label: '▸ Wikipedia: Microscopy', url: 'https://en.wikipedia.org/wiki/Microscopy' }
+    ]
+  },
+  {
+    id: 'citizensci',
+    name: 'Citizen Science Platforms & Apps',
+    desc: 'Digital tools like iNaturalist and eBird that recruit everyday people to collect environmental data — democratizing scientific observation and turning public attention into ecological knowledge.',
+    example: 'Ken Goldberg\'s Telegarden (1995–2004) was an early internet-based citizen science artwork in which thousands of online participants collaboratively tended a real garden using a robotic arm.',
+    links: [
+      { label: '▶ Ken Goldberg — Telegarden', url: 'https://goldberg.berkeley.edu/garden/Ars/' },
+      { label: '▸ Wikipedia: Citizen Science', url: 'https://en.wikipedia.org/wiki/Citizen_science' }
+    ]
+  },
+  {
+    id: 'telepresence',
+    name: 'Telepresence & Robotic Systems',
+    desc: 'Technologies that allow humans to act at a distance — robots tending remote gardens, cameras inhabiting animal bodies — mediating presence between humans and far-off or nonhuman environments.',
+    example: 'Eduardo Kac\'s Rara Avis (1996) placed visitors inside a VR headset embodying a telerobotic macaw, experiencing a bird aviary from a nonhuman perspective via live camera feed.',
+    links: [
+      { label: '▶ Eduardo Kac — Rara Avis', url: 'http://www.ekac.org/raraavis.html' },
+      { label: '▸ Wikipedia: Telepresence', url: 'https://en.wikipedia.org/wiki/Telepresence' }
+    ]
+  },
+  {
+    id: 'vrar',
+    name: 'Virtual & Augmented Reality for Nature',
+    desc: 'Immersive technologies that simulate or overlay natural environments — from VR forests that evoke embodied ecological experience to AR tools that reveal hidden layers of the living world.',
+    example: 'Charlotte Davies\'s Ephémère (1998) was a breath-controlled VR environment of roots, seeds, and landscapes that immersed participants in a dissolving virtual ecology navigated through the body.',
+    links: [
+      { label: '▶ Char Davies — Osmose & Ephémère (MediaArtNet)', url: 'http://www.medienkunstnetz.de/works/osmose/' },
+      { label: '▸ Wikipedia: Virtual Reality', url: 'https://en.wikipedia.org/wiki/Virtual_reality' }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// DATA: THEMES
+// ═══════════════════════════════════════════════════
+const THEMES = [
+  {
+    id: 'artlife',
+    name: 'Artificial Life & Generative Ecosystems',
+    desc: 'Code that evolves, simulates biological growth, and asks whether digital processes can constitute genuine life. Swarm intelligence, virtual creatures, organism-as-algorithm.',
+    link: { label: '▸ Wikipedia: Artificial Life', url: 'https://en.wikipedia.org/wiki/Artificial_life' }
+  },
+  {
+    id: 'biotech',
+    name: 'Biotech, Genetics & the Manipulation of Life',
+    desc: 'Artists at the intersection of biology and technology — encoding DNA, growing tissue sculptures, critiquing GMOs. Political works about who controls life itself.',
+    link: { label: '▸ Wikipedia: Biotechnology', url: 'https://en.wikipedia.org/wiki/Biotechnology' }
+  },
+  {
+    id: 'teleeco',
+    name: 'Telepresence & Remote Ecologies',
+    desc: 'Works that let you tend a garden or inhabit a bird\'s body from across the world via the internet — collapsing distance while introducing radical mediation between human and nature.',
+    link: { label: '▸ Wikipedia: Telepresence', url: 'https://en.wikipedia.org/wiki/Telepresence' }
+  },
+  {
+    id: 'hiddeneco',
+    name: 'Hidden Ecology of the Internet & Digital Infrastructure',
+    desc: 'Data centers, e-waste, rare earth minerals — the material and ecological cost of so-called \'immaterial\' digital media. Making the invisible visible.',
+    link: { label: '▸ Wikipedia: Environmental Impact of Computing', url: 'https://en.wikipedia.org/wiki/Environmental_impact_of_computing' }
+  },
+  {
+    id: 'virtnature',
+    name: 'Virtual Nature & Immersive Space',
+    desc: 'Can a digital landscape carry ecological meaning? VR environments that evoke fog, water, soil, and seasons — asking whether virtual nature can generate genuine ecological consciousness.',
+    link: { label: '▸ Wikipedia: Virtual Reality', url: 'https://en.wikipedia.org/wiki/Virtual_reality' }
+  },
+  {
+    id: 'interspecies',
+    name: 'Interspecies Communication & Post-human Ecologies',
+    desc: 'Using technology to bridge human and nonhuman worlds — from plants as interface devices to embodying a bird online. Can empathy traverse species boundaries through digital mediation?',
+    link: { label: '▸ Wikipedia: Interspecies Communication', url: 'https://en.wikipedia.org/wiki/Interspecies_communication' }
+  },
+  {
+    id: 'ecocrit',
+    name: 'Ecocriticism, Climate Visualization & Environmental Media',
+    desc: 'Scholarly and artistic frameworks for understanding how media represents, communicates, and intervenes in ecological crisis. Data visualization, climate activism, environmental pedagogy.',
+    link: { label: '▸ Wikipedia: Ecocriticism', url: 'https://en.wikipedia.org/wiki/Ecocriticism' }
+  },
+  {
+    id: 'activist',
+    name: 'Activist, Critical & Dialogic Practices',
+    desc: 'Art that uses the logic of the internet against itself, critiques extraction and waste, or builds new social ecologies. Works that understand culture as co-producing environmental conditions.',
+    link: { label: '▸ Wikipedia: Activist Art', url: 'https://en.wikipedia.org/wiki/Activist_art' }
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// DATA: FINAL QUESTIONS
+// ═══════════════════════════════════════════════════
+const FINAL_QUESTIONS = [
+  {
+    id: 'idea_describe',
+    q: 'DESCRIBE YOUR SPECULATIVE ARTWORK',
+    desc: 'Drawing on your selected natural image, technology, and theme — describe your speculative artwork idea. What does it look, feel, or behave like? What does the audience experience?',
+    color: '--g3'
+  },
+  {
+    id: 'idea_why',
+    q: 'WHY THIS COMBINATION?',
+    desc: 'Why is this specific combination of natural image + technology + theme interesting or meaningful? What does the juxtaposition reveal, challenge, or ask?',
+    color: '--b4'
+  },
+  {
+    id: 'idea_medium',
+    q: 'MEDIUM & MAKING',
+    desc: 'What physical or digital materials, tools, or processes would be used to realize this artwork? How does the medium reinforce the ecological or biological concept?',
+    color: '--accent1'
+  },
+  {
+    id: 'idea_message',
+    q: 'CONCEPT & MESSAGE',
+    desc: 'What does the artwork say about the relationship between nature, technology, and human perception? What question does it leave the viewer with?',
+    color: '--br4'
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let currentUser = '';
+let currentGroup = null;
+let groupData = {};
+let unsubscribe = null;
+
+// ═══════════════════════════════════════════════════
+// FIREBASE
+// ═══════════════════════════════════════════════════
+function getDB() { return window._db; }
+function getFB() { return window._fbFunctions; }
+function groupDocId(g) { return `group_${g}`; }
+
+async function loadGroup() {
+  if (!window._fbReady) {
+    groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+    renderAll();
+    return;
+  }
+  const { doc, onSnapshot } = getFB();
+  const db = getDB();
+  const ref = doc(db, 'nature_groups', groupDocId(currentGroup));
+  if (unsubscribe) unsubscribe();
+  unsubscribe = onSnapshot(ref, snap => {
+    if (snap.exists()) {
+      groupData = snap.data();
+    } else {
+      groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+    }
+    renderAll();
+  }, err => {
+    showToast('Sync error: ' + err.message, 'error');
+  });
+}
+
+async function saveGroup() {
+  if (!window._fbReady) return;
+  try {
+    const { doc, setDoc } = getFB();
+    const db = getDB();
+    await setDoc(doc(db, 'nature_groups', groupDocId(currentGroup)), groupData);
+  } catch(e) {
+    showToast('Save error: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════════════════
+function selectGroup(g) {
+  currentGroup = g;
+  document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.group-btn[data-g="${g}"]`).classList.add('selected');
+}
+
+function enterApp() {
+  const name = document.getElementById('user-name-input').value.trim();
+  if (!name) { showToast('Please enter your name!', 'error'); return; }
+  if (!currentGroup) { showToast('Please select a group!', 'error'); return; }
+  currentUser = name;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('badge-text').textContent = `${name} · Group ${currentGroup}`;
+  buildNaturalImagesGrid();
+  buildTechGrid();
+  buildThemeGrid();
+  buildFinalCards();
+  buildSynthesisCards();
+  setTimeout(wireAutoSaves, 50);
+  loadGroup();
+}
+
+function returnToSetup() {
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD: NATURAL IMAGES GRID
+// ═══════════════════════════════════════════════════
+// Map search terms to Wikipedia article titles for direct links
+const WIKI_LINKS = {
+  'ni01':'Red_blood_cell','ni02':'Diatom','ni03':'Mitosis','ni04':'Neuron',
+  'ni05':'Pollen','ni06':'Radiolaria','ni07':'Tardigrade','ni08':'Snowflake',
+  'ni09':'Mycelium','ni10':'DNA','ni11':'Helianthus_annuus','ni12':'Protea_cynaroides',
+  'ni13':'Nelumbo_nucifera','ni14':'Venus_flytrap','ni15':'Fiddlehead_fern',
+  'ni16':'Orchidaceae','ni17':'Dahlia','ni18':'Romanesco_broccoli',
+  'ni19':'Leaf#Venation','ni20':'Moss','ni21':'Nautilus_(genus)',
+  'ni22':'Butterfly','ni23':'Coral_reef','ni24':'Jellyfish',
+  'ni25':'Peacock#Plumage','ni26':'Starling_murmuration','ni27':'Spider_web',
+  'ni28':'Sea_urchin','ni29':'Bioluminescence','ni30':'Ammonite',
+  'ni31':'Protein_structure','ni32':'Carbon_nanotube','ni33':'Ice_crystal',
+  'ni34':'Quartz','ni35':'Chlorophyll','ni36':'Canopy_(biology)',
+  'ni37':'River_delta','ni38':'Glacier','ni39':'Mangrove',
+  'ni40':'Tide_pool','ni41':'Giant%27s_Causeway','ni42':'Erg_(landform)',
+  'ni43':'Kelp_forest','ni44':'Aurora','ni45':'Dendrochronology',
+  'ni46':'Fibonacci_sequence#Nature','ni47':'Mytilus','ni48':'Dragonfly#Wings',
+  'ni49':'Snakeskin','ni50':'Cactus#Spines','ni51':'Root_hair',
+  'ni52':'Bacteria','ni53':'Volcanic_lightning','ni54':'Ant_colony',
+  'ni55':'Sea_foam','ni56':'Bone#Microstructure','ni57':'Lava',
+  'ni58':'Slime_mold','ni59':'Cephalopod_eye','ni60':'Lichen',
+  'ni61':'Frost','ni62':'Betula#Bark','ni63':'Taraxacum',
+  'ni64':'Cuttlefish','ni65':'Starfish','ni66':'Hummingbird#Flight',
+  'ni67':'Amethyst','ni68':'Termite_mound','ni69':'Compound_eye',
+  'ni70':'Mushroom#Gills','ni71':'Honeycomb','ni72':'Leaf_litter',
+  'ni73':'Rainforest#Canopy','ni74':'Underwater_light_field','ni75':'Iceberg',
+  'ni76':'Soil_horizon','ni77':'Sea_anemone','ni78':'Humpback_whale',
+  'ni79':'Seagrass','ni80':'Zebra#Stripes','ni81':'Mammoth_Hot_Springs',
+  'ni82':'Seashell','ni83':'Hydrothermal_vent','ni84':'Chrysalis',
+  'ni85':'Sphagnum','ni86':'Root#Types_of_roots','ni87':'Coral_bleaching',
+  'ni88':'Strelitzia_reginae','ni89':'Nautilus_(genus)','ni90':'Virus',
+  'ni91':'Ferrofluid','ni92':'Firefly','ni93':'Betula_(genus)',
+  'ni94':'Hot_spring','ni95':'Whale_shark','ni96':'Basidiospore',
+  'ni97':'Coral_bleaching','ni98':'Bee','ni99':'Basalt',
+  'ni100':'Bioluminescence#Deep_sea'
+};
+
+// Simple emoji icons per category for visual variety
+const NAT_ICONS = [
+  '🩸','🔬','🧬','🧠','🌸','🔵','🐛','❄️','🍄','🧬',
+  '🌻','🌺','🪷','🪴','🌿','🌸','🌼','🥦','🍃','🌱',
+  '🐚','🦋','🪸','🪼','🦚','🐦','🕸️','🦔','🌊','🐌',
+  '🧫','⚛️','🧊','💎','🌿','🌲','🏞️','🧊','🌴','🏊',
+  '🪨','🏜️','🌊','🌌','🪵','🌀','🐚','🦟','🐍','🌵',
+  '🌿','🌱','⚡','🐜','🌊','🦴','🌋','🟡','👁️','🧡',
+  '❄️','🪵','🌼','🦑','⭐','🐦','💜','🐜','👁️','🍄',
+  '🍯','🍂','🌳','💫','🧊','🪨','🌊','🐋','🌿','🦓',
+  '🌈','🐚','🌊','🦋','🌱','🌿','🪸','🌺','🐚','🦠',
+  '🧲','✨','🌳','♨️','🦈','🍄','🪸','🐝','🪨','🌊'
+];
+
+function buildNaturalImagesGrid() {
+  const grid = document.getElementById('natural-images-grid');
+  grid.innerHTML = '';
+  NATURAL_IMAGES.forEach((img, i) => {
+    const wikiSlug = WIKI_LINKS[img.id] || img.label.replace(/ /g,'_');
+    const wikiUrl = `https://en.wikipedia.org/wiki/${wikiSlug}`;
+    const icon = NAT_ICONS[i] || '🌿';
+    const div = document.createElement('div');
+    div.className = 'nat-img-card';
+    div.id = `nat-${img.id}`;
+    div.innerHTML = `
+      <div class="nat-img-check">✓</div>
+      <div class="nat-img-icon">${icon}</div>
+      <div class="nat-img-label">${escHtml(img.label)}</div>
+      <a class="nat-img-link" href="${wikiUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ see image</a>
+    `;
+    div.onclick = () => selectNaturalImage(img.id, img.label);
+    grid.appendChild(div);
+  });
+}
+
+function selectNaturalImage(id, label) {
+  // Update groupData
+  if (!groupData.selections) groupData.selections = {};
+  groupData.selections.naturalImage = { id, label, selectedBy: currentUser };
+  saveGroup();
+  renderSelections();
+  showToast(`Selected: ${label}`, 'success');
+}
+
+function renderSelections() {
+  const sel = groupData.selections || {};
+  const natResearch = groupData.natResearch || {};
+
+  // Natural image
+  document.querySelectorAll('.nat-img-card').forEach(c => c.classList.remove('selected'));
+  if (sel.naturalImage) {
+    const el = document.getElementById(`nat-${sel.naturalImage.id}`);
+    if (el) el.classList.add('selected');
+    const disp = document.getElementById('selected-natural-display');
+    disp.classList.add('visible');
+    document.getElementById('selected-nat-name').textContent = sel.naturalImage.label
+      + (sel.naturalImage.selectedBy ? ` — selected by ${sel.naturalImage.selectedBy}` : '');
+
+    // Set wiki link
+    const wikiSlug = WIKI_LINKS[sel.naturalImage.id] || sel.naturalImage.label.replace(/ /g,'_');
+    const wikiLink = document.getElementById('selected-nat-wiki-link');
+    if (wikiLink) {
+      wikiLink.href = `https://en.wikipedia.org/wiki/${wikiSlug}`;
+      wikiLink.textContent = `↗ Open Wikipedia: ${sel.naturalImage.label}`;
+    }
+
+    // Render uploaded image preview
+    const previewWrap = document.getElementById('nat-img-preview-wrap');
+    if (previewWrap) {
+      const myUpload = natResearch[currentUser] && natResearch[currentUser].imageBase64;
+      // Show any group member's uploaded image (or mine)
+      const anyUpload = Object.values(natResearch).find(r => r.imageBase64);
+      if (myUpload) {
+        previewWrap.innerHTML = `
+          <img class="nat-img-preview" src="data:image/jpeg;base64,${myUpload}" alt="Natural image" />
+          <div class="nat-img-preview-footer">
+            <span>Your uploaded image</span>
+            <button class="nat-img-remove-btn" onclick="removeNatImage()">✕ Remove</button>
+          </div>`;
+      } else {
+        previewWrap.innerHTML = `
+          <div class="nat-upload-placeholder">
+            <span style="font-size:1.75rem;">🖼️</span>
+            <span>Click or drag to upload your saved image</span>
+            <small>Save from Wikipedia, then upload here</small>
+          </div>`;
+      }
+    }
+
+    // Restore my research notes text (don't overwrite if focused)
+    const myNotes = natResearch[currentUser] && natResearch[currentUser].notes || '';
+    const notesEl = document.getElementById('nat-research-notes');
+    if (notesEl && document.activeElement !== notesEl) notesEl.value = myNotes;
+
+    // Render other members' research + images
+    const othersEl = document.getElementById('nat-research-others');
+    if (othersEl) {
+      const others = Object.entries(natResearch).filter(([name]) => name !== currentUser);
+      if (others.length === 0) {
+        othersEl.innerHTML = '';
+      } else {
+        othersEl.innerHTML = `
+          <div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;">— Teammates' Research —</div>
+          ${others.map(([name, data]) => `
+            <div class="nat-research-others-entry">
+              <div class="nat-research-others-name">${escHtml(name)}</div>
+              ${data.imageBase64 ? `<img class="nat-research-others-img" src="data:image/jpeg;base64,${data.imageBase64}" alt="${escHtml(name)}'s image" />` : ''}
+              ${data.notes ? `<div class="nat-research-others-text" style="margin-top:${data.imageBase64?'0.6rem':'0'}">${escHtml(data.notes)}</div>` : ''}
+            </div>
+          `).join('')}
+        `;
+      }
+    }
+  }
+
+  // Technology
+  document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
+  if (sel.technology) {
+    const el = document.getElementById(`tech-${sel.technology.id}`);
+    if (el) el.classList.add('selected');
+    const panel = document.getElementById('selected-tech-panel');
+    panel.classList.add('visible');
+    const tech = TECHNOLOGIES.find(t => t.id === sel.technology.id);
+    if (tech) {
+      document.getElementById('selected-tech-name').textContent = tech.name;
+      document.getElementById('selected-tech-desc').textContent = tech.desc;
+      document.getElementById('selected-tech-links').innerHTML = tech.links.map(l =>
+        `<a class="selected-tech-link" href="${l.url}" target="_blank" rel="noopener">${escHtml(l.label)}</a>`
+      ).join('');
+    }
+  }
+
+  // Theme
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+  if (sel.theme) {
+    const el = document.getElementById(`theme-${sel.theme.id}`);
+    if (el) el.classList.add('selected');
+    const panel = document.getElementById('selected-theme-panel');
+    panel.classList.add('visible');
+    const theme = THEMES.find(t => t.id === sel.theme.id);
+    if (theme) {
+      document.getElementById('selected-theme-name').textContent = theme.name;
+      document.getElementById('selected-theme-desc').textContent = theme.desc;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// NAT IMAGE UPLOAD
+// ═══════════════════════════════════════════════════
+function handleNatImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = h * MAX / w; w = MAX; }
+      if (h > MAX) { w = w * MAX / h; h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      if (!groupData.natResearch) groupData.natResearch = {};
+      if (!groupData.natResearch[currentUser]) groupData.natResearch[currentUser] = {};
+      groupData.natResearch[currentUser].imageBase64 = base64;
+      await saveGroup();
+      showToast('Image uploaded! 🌿', 'success');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function removeNatImage() {
+  if (!groupData.natResearch || !groupData.natResearch[currentUser]) return;
+  delete groupData.natResearch[currentUser].imageBase64;
+  await saveGroup();
+  showToast('Image removed', 'success');
+}
+
+async function saveNatResearch() {
+  const el = document.getElementById('nat-research-notes');
+  if (!el || !el.value.trim()) { showToast('Please write some notes first!', 'error'); return; }
+  if (!groupData.natResearch) groupData.natResearch = {};
+  if (!groupData.natResearch[currentUser]) groupData.natResearch[currentUser] = {};
+  groupData.natResearch[currentUser].notes = el.value.trim();
+  clearFieldDraft('nat-research');
+  await saveGroup();
+  showToast('Research notes saved! 🌿', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD: TECHNOLOGY GRID
+// ═══════════════════════════════════════════════════
+function buildTechGrid() {
+  const grid = document.getElementById('tech-grid');
+  grid.innerHTML = '';
+  TECHNOLOGIES.forEach(tech => {
+    const div = document.createElement('div');
+    div.className = 'tech-card';
+    div.id = `tech-${tech.id}`;
+    div.innerHTML = `
+      <div class="tech-card-check">✓</div>
+      <div class="tech-card-name">${escHtml(tech.name)}</div>
+      <div class="tech-artist-example">${escHtml(tech.example)}</div>
+      <div class="tech-card-desc">${escHtml(tech.desc)}</div>
+      <div class="tech-card-links">
+        ${tech.links.map(l => `<a class="tech-link" href="${l.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escHtml(l.label)}</a>`).join('')}
+      </div>
+    `;
+    div.onclick = (e) => {
+      if (e.target.tagName === 'A') return;
+      if (!groupData.selections) groupData.selections = {};
+      groupData.selections.technology = { id: tech.id, selectedBy: currentUser };
+      saveGroup();
+      renderSelections();
+      showToast(`Technology selected: ${tech.name}`, 'success');
+    };
+    grid.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD: THEME GRID
+// ═══════════════════════════════════════════════════
+function buildThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = '';
+  THEMES.forEach(theme => {
+    const div = document.createElement('div');
+    div.className = 'theme-card';
+    div.id = `theme-${theme.id}`;
+    div.innerHTML = `
+      <div class="theme-card-check">✓</div>
+      <div class="theme-card-name">${escHtml(theme.name)}</div>
+      <div class="theme-card-desc">${escHtml(theme.desc)}</div>
+      <a class="theme-link" href="${theme.link.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escHtml(theme.link.label)}</a>
+    `;
+    div.onclick = (e) => {
+      if (e.target.tagName === 'A') return;
+      if (!groupData.selections) groupData.selections = {};
+      groupData.selections.theme = { id: theme.id, selectedBy: currentUser };
+      saveGroup();
+      renderSelections();
+      showToast(`Theme selected: ${theme.name}`, 'success');
+    };
+    grid.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD: FINAL CONCEPT CARDS
+// ═══════════════════════════════════════════════════
+function buildFinalCards() {
+  const container = document.getElementById('final-cards');
+  container.innerHTML = '';
+  FINAL_QUESTIONS.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'final-card';
+    card.innerHTML = `
+      <div class="final-q" style="color:var(${item.color})">${item.q}</div>
+      <div class="final-q-desc">${item.desc}</div>
+      <div class="my-response-box">
+        <div class="my-resp-label" style="color:var(${item.color})">✏ Your Response — <span style="opacity:0.7">${escHtml(currentUser)}</span></div>
+        <textarea class="my-resp-input" id="mytxt-${item.id}" placeholder="Write your response here..."></textarea>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <button class="save-response-btn" style="border-color:var(${item.color});color:var(${item.color});" onclick="saveMyResponse('${item.id}')">Save My Response</button>
+          <span class="autosave-indicator"> draft saved</span>
+        </div>
+      </div>
+      <div id="allresp-${item.id}">
+        <p class="no-responses-yet">No responses yet — be the first!</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderFinalResponses() {
+  const fr = groupData.finalResponses || {};
+  FINAL_QUESTIONS.forEach(item => {
+    const allArea = document.getElementById(`allresp-${item.id}`);
+    if (!allArea) return;
+    const responses = fr[item.id] || {};
+    const entries = Object.entries(responses);
+    if (!entries.length) {
+      allArea.innerHTML = `<p class="no-responses-yet">No responses yet — be the first!</p>`;
+    } else {
+      allArea.innerHTML = `
+        <div class="responses-divider"><span>All Responses (${entries.length})</span></div>
+        <div class="all-resp-list">
+          ${entries.map(([name, text]) => `
+            <div class="resp-entry ${name === currentUser ? 'resp-mine' : ''}">
+              <div class="resp-entry-name" style="color:var(${item.color})">${escHtml(name)}</div>
+              <div class="resp-entry-text">${escHtml(text)}</div>
+              ${name === currentUser ? `<button class="resp-delete-btn" onclick="deleteMyResponse('${item.id}')">✕ Remove my response</button>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    const myTxt = document.getElementById(`mytxt-${item.id}`);
+    if (myTxt && document.activeElement !== myTxt) myTxt.value = responses[currentUser] || '';
+  });
+}
+
+async function saveMyResponse(qid) {
+  const myTxt = document.getElementById(`mytxt-${qid}`);
+  if (!myTxt) return;
+  const text = myTxt.value.trim();
+  if (!text) { showToast('Please write something first!', 'error'); return; }
+  if (!groupData.finalResponses) groupData.finalResponses = {};
+  if (!groupData.finalResponses[qid]) groupData.finalResponses[qid] = {};
+  groupData.finalResponses[qid][currentUser] = text;
+  clearFieldDraft(`final_${qid}`);
+  await saveGroup();
+  showToast('Response saved! 🌿', 'success');
+}
+
+async function deleteMyResponse(qid) {
+  if (!groupData.finalResponses || !groupData.finalResponses[qid]) return;
+  delete groupData.finalResponses[qid][currentUser];
+  await saveGroup();
+  showToast('Response removed', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// COMBINE RESPONSES (nattech + theme)
+// ═══════════════════════════════════════════════════
+function renderCombineResponses() {
+  ['nattech', 'theme'].forEach(qid => {
+    const area = document.getElementById(`callresp-${qid}`);
+    if (!area) return;
+    const responses = (groupData.combineResponses || {})[qid] || {};
+    const entries = Object.entries(responses);
+    if (!entries.length) {
+      area.innerHTML = `<p class="no-responses-yet">No responses yet — be the first!</p>`;
+    } else {
+      area.innerHTML = `
+        <div class="responses-divider"><span>All Responses (${entries.length})</span></div>
+        <div class="all-resp-list">
+          ${entries.map(([name, text]) => `
+            <div class="resp-entry ${name === currentUser ? 'resp-mine' : ''}">
+              <div class="resp-entry-name">${escHtml(name)}</div>
+              <div class="resp-entry-text">${escHtml(text)}</div>
+              ${name === currentUser ? `<button class="resp-delete-btn" onclick="deleteCombineResponse('${qid}')">✕ Remove my response</button>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    const myTxt = document.getElementById(`cmytxt-${qid}`);
+    if (myTxt && document.activeElement !== myTxt) myTxt.value = responses[currentUser] || '';
+  });
+}
+
+async function saveCombineResponse(qid) {
+  const myTxt = document.getElementById(`cmytxt-${qid}`);
+  if (!myTxt) return;
+  const text = myTxt.value.trim();
+  if (!text) { showToast('Please write something first!', 'error'); return; }
+  if (!groupData.combineResponses) groupData.combineResponses = {};
+  if (!groupData.combineResponses[qid]) groupData.combineResponses[qid] = {};
+  groupData.combineResponses[qid][currentUser] = text;
+  clearFieldDraft(`combine_${qid}`);
+  await saveGroup();
+  showToast('Response saved! 🌿', 'success');
+}
+
+async function deleteCombineResponse(qid) {
+  if (!groupData.combineResponses || !groupData.combineResponses[qid]) return;
+  delete groupData.combineResponses[qid][currentUser];
+  await saveGroup();
+  showToast('Response removed', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// SKETCHES UPLOAD
+// ═══════════════════════════════════════════════════
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const sketches = groupData.sketches || [];
+  if (sketches.length >= 20) { showToast('Maximum 20 images reached!', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = h * MAX / w; w = MAX; }
+      if (h > MAX) { w = w * MAX / h; h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+      const sketch = { id: Date.now().toString(), base64, uploader: currentUser, description: '', likes: [] };
+      if (!groupData.sketches) groupData.sketches = [];
+      groupData.sketches.push(sketch);
+      await saveGroup();
+      showToast('Image uploaded!', 'success');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════
+// SYNTHESIS
+// ═══════════════════════════════════════════════════
+function buildSynthesisCards() {
+  const container = document.getElementById('synthesis-cards');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="synthesis-intro-card">
+      <strong>Read before writing:</strong> Scroll through Sections 01–04 and read what your groupmates have written. Your synthesis should weave together the natural image, the technology, the theme, and your group's collective responses into one cohesive speculative artwork idea.
+    </div>
+    <div id="synthesis-list"></div>
+  `;
+}
+
+function renderSynthesisCards() {
+  const list = document.getElementById('synthesis-list');
+  if (!list) return;
+  const byUser = groupData.synthesisByUser || {};
+  const names = new Set(Object.keys(byUser));
+  names.add(currentUser);
+
+  list.innerHTML = '';
+  Array.from(names).forEach(name => {
+    const isMine = name === currentUser;
+    const text = byUser[name] || '';
+    const card = document.createElement('div');
+    card.className = `synthesis-person-card${isMine ? ' is-mine' : ''}`;
+    card.innerHTML = `
+      <div class="synthesis-person-name">${escHtml(name)}</div>
+      <div class="synthesis-person-label">${isMine ? '✏ Your synthesis' : 'Group member'}</div>
+      ${isMine ? `
+        <div class="synthesis-my-section">
+          <textarea class="synthesis-textarea" id="synthesis-txt" placeholder="Write your complete speculative artwork idea here — weaving together the natural image, technology, theme, and your group's collective thinking...">${escHtml(text)}</textarea>
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+            <button class="synthesis-save-btn" onclick="saveSynthesisResponse()">Save My Synthesis</button>
+            <span class="autosave-indicator"> draft saved</span>
+            ${text ? `<button class="synthesis-remove-btn" onclick="deleteSynthesisResponse()">✕ Remove</button>` : ''}
+          </div>
+        </div>
+      ` : `
+        <div class="synthesis-text-display ${text ? '' : 'empty-display'}">${text ? escHtml(text) : `${escHtml(name)} hasn't written their synthesis yet.`}</div>
+      `}
+    `;
+    list.appendChild(card);
+  });
+
+  setTimeout(() => {
+    attachAutoSave('synthesis-txt', 'synthesis', async () => {
+      const el = document.getElementById('synthesis-txt');
+      if (!el || !el.value.trim()) return;
+      if (!groupData.synthesisByUser) groupData.synthesisByUser = {};
+      groupData.synthesisByUser[currentUser] = el.value.trim();
+      await saveGroup();
+    });
+  }, 30);
+}
+
+async function saveSynthesisResponse() {
+  const txt = document.getElementById('synthesis-txt');
+  if (!txt) return;
+  const text = txt.value.trim();
+  if (!text) { showToast('Please write your synthesis first!', 'error'); return; }
+  if (!groupData.synthesisByUser) groupData.synthesisByUser = {};
+  groupData.synthesisByUser[currentUser] = text;
+  clearFieldDraft('synthesis');
+  await saveGroup();
+  showToast('Synthesis saved! 🌿', 'success');
+}
+
+async function deleteSynthesisResponse() {
+  if (!groupData.synthesisByUser) return;
+  delete groupData.synthesisByUser[currentUser];
+  await saveGroup();
+  showToast('Synthesis removed', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════════
+function renderAll() {
+  renderSelections();
+  renderSketches();
+  renderSummary();
+  renderCombineResponses();
+  renderFinalResponses();
+  renderSynthesisCards();
+}
+
+function renderSketches() {
+  const sketches = groupData.sketches || [];
+  const grid = document.getElementById('sketches-grid');
+  document.getElementById('sketch-count-badge').textContent = `${sketches.length} / 20 images`;
+  grid.innerHTML = '';
+
+  if (sketches.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">🌿</div><p>No images yet. Upload sketches, mood images, or inspiration.</p></div>`;
+    return;
+  }
+
+  sketches.forEach((sk, i) => {
+    const isOwner = sk.uploader === currentUser;
+    const likesHtml = (sk.likes || []).map(l =>
+      `<span class="like-chip"><span>${escHtml(l.text)}</span><span class="like-chip-author">${escHtml(l.author)}</span></span>`
+    ).join('');
+
+    const card = document.createElement('div');
+    card.className = 'sketch-card';
+    card.innerHTML = `
+      <div class="card-top"></div>
+      ${isOwner ? `<button class="delete-sketch-btn visible" onclick="deleteSketch('${sk.id}')" title="Delete">✕</button>` : ''}
+      <img class="sketch-img" src="data:image/jpeg;base64,${sk.base64}" alt="Image ${i+1}" loading="lazy" />
+      <div class="sketch-body">
+        <div class="sketch-meta">
+          <span class="sketch-num">IMAGE ${String(i+1).padStart(2,'0')}</span>
+          <span class="sketch-author">by ${escHtml(sk.uploader)}</span>
+        </div>
+        <textarea class="description-area"
+          placeholder="${isOwner ? 'Describe this sketch, mood, or inspiration...' : 'Description by ' + escHtml(sk.uploader)}"
+          ${isOwner ? '' : 'disabled'}
+          onblur="saveDescription('${sk.id}', this.value)"
+        >${escHtml(sk.description || '')}</textarea>
+        ${isOwner ? `<button class="save-btn" onclick="saveDescriptionBtn('${sk.id}', this)">Save Description</button>` : ''}
+        <div class="likes-container">
+          <div class="likes-label">🌱 What people love</div>
+          <div id="likes-${sk.id}">${likesHtml || '<span style="color:var(--muted);font-size:0.78rem;">No likes yet</span>'}</div>
+          ${!isOwner ? `
+          <div class="like-input-row">
+            <input class="like-input" id="like-input-${sk.id}" type="text" placeholder="What do you love about this?" maxlength="200"
+              onkeydown="if(event.key==='Enter')addLike('${sk.id}')" />
+            <button class="like-add-btn" onclick="addLike('${sk.id}')">+ Like</button>
+          </div>` : '<p style="color:var(--muted);font-size:0.76rem;margin-top:0.5rem;font-style:italic;">Other members can like this</p>'}
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderSummary() {
+  const sketches = groupData.sketches || [];
+  const grid = document.getElementById('summary-grid');
+  const withLikes = sketches.filter(sk => sk.likes && sk.likes.length > 0);
+  if (withLikes.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="e-icon">🌱</div><p>Likes will appear here automatically once teammates react to uploaded images.</p></div>`;
+    return;
+  }
+  grid.innerHTML = withLikes.map(sk => {
+    const idx = sketches.indexOf(sk);
+    return `
+      <div class="summary-item">
+        <div class="summary-sketch-title">IMAGE ${String(idx+1).padStart(2,'0')} — by ${escHtml(sk.uploader)}</div>
+        ${sk.description ? `<p style="color:var(--muted);font-size:0.84rem;margin-bottom:0.75rem;line-height:1.65;">${escHtml(sk.description)}</p>` : ''}
+        <ul class="summary-likes-list">
+          ${sk.likes.map(l => `<li>${escHtml(l.text)}<span>— ${escHtml(l.author)}</span></li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// SKETCH ACTIONS
+// ═══════════════════════════════════════════════════
+async function saveDescription(id, value) {
+  const sk = (groupData.sketches || []).find(s => s.id === id);
+  if (!sk || sk.uploader !== currentUser) return;
+  sk.description = value;
+  await saveGroup();
+}
+
+async function saveDescriptionBtn(id, btn) {
+  const ta = btn.previousElementSibling;
+  await saveDescription(id, ta.value);
+  showToast('Description saved!', 'success');
+}
+
+async function addLike(sketchId) {
+  const input = document.getElementById(`like-input-${sketchId}`);
+  const text = input.value.trim();
+  if (!text) return;
+  const sk = (groupData.sketches || []).find(s => s.id === sketchId);
+  if (!sk) return;
+  if (!sk.likes) sk.likes = [];
+  sk.likes.push({ author: currentUser, text });
+  input.value = '';
+  await saveGroup();
+  showToast('Liked! 🌱', 'success');
+}
+
+async function deleteSketch(id) {
+  if (!confirm('Delete this image?')) return;
+  groupData.sketches = (groupData.sketches || []).filter(s => s.id !== id);
+  await saveGroup();
+  showToast('Image removed', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════
+function openResetModal() {
+  document.getElementById('reset-group-label').textContent = `Group ${currentGroup}`;
+  document.getElementById('reset-pw-hint').textContent = `group${currentGroup}`;
+  document.getElementById('reset-pw-input').value = '';
+  document.getElementById('reset-modal').classList.add('open');
+}
+
+function closeResetModal() { document.getElementById('reset-modal').classList.remove('open'); }
+
+async function confirmReset() {
+  const pw = document.getElementById('reset-pw-input').value.trim();
+  if (pw !== `group${currentGroup}`) { showToast('Wrong password!', 'error'); return; }
+  groupData = { sketches: [], finalResponses: {}, combineResponses: {} };
+  await saveGroup();
+  closeResetModal();
+  showToast(`Group ${currentGroup} reset!`, 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════════════════
+async function exportPDF() {
+  const btn = document.getElementById('export-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  showToast('Building PDF…', 'success');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = 210, ph = 297, ml = 18, mt = 20, mb = 24;
+    const cw = pw - ml * 2, maxY = ph - mb;
+    let y = mt, pageNum = 1;
+
+    const C = {
+      bg: [4,12,24],
+      surface: [8,20,40],
+      muted: [110,160,210],
+      text: [232,242,255],
+      g: [[8,42,82],[15,74,153],[26,127,224],[77,174,255],[170,216,255]],
+      b: [[6,24,48],[13,58,128],[32,144,240],[112,196,255]],
+      br: [[4,16,32],[10,40,96],[58,143,232],[136,204,255]]
+    };
+
+    function bgFill() {
+      doc.setFillColor(...C.bg); doc.rect(0,0,pw,ph,'F');
+      doc.setFillColor(...C.g[2]); doc.rect(0,0,pw,2.5,'F');
+      doc.setFillColor(...C.b[2]); doc.rect(0,2.5,pw,1,'F');
+    }
+
+    function newPage() { doc.addPage(); pageNum++; y = mt; bgFill(); }
+
+    function tx(text, x, size, color, bold, maxW) {
+      doc.setFontSize(size); doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setTextColor(...color);
+      const lh = size * 0.42;
+      const rightMargin = pw - ml;
+      const safeW = Math.min(maxW != null ? maxW : (rightMargin - x), rightMargin - x);
+      const charsPerLine = Math.max(10, Math.floor(safeW / (size * 0.215)));
+      const processed = String(text || '(none)').replace(/\S+/g, word => {
+        if (word.length <= charsPerLine) return word;
+        const chunks = [];
+        for (let i = 0; i < word.length; i += charsPerLine) chunks.push(word.slice(i, i + charsPerLine));
+        return chunks.join(' ');
+      });
+      const lines = doc.splitTextToSize(processed, safeW);
+      lines.forEach(line => { if (y + lh > maxY) newPage(); doc.text(line, x, y); y += lh; });
+    }
+
+    function gap(mm) { y += mm; if (y > maxY) newPage(); }
+    function rule(color) {
+      if (y + 2 > maxY) newPage();
+      doc.setDrawColor(...color); doc.setLineWidth(0.5); doc.line(ml,y,pw-ml,y); gap(4);
+    }
+
+    function sectionHead(num, title, color) {
+      if (y + 16 > maxY) newPage();
+      doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.setTextColor(...color); doc.text(num, ml, y+5);
+      doc.setFontSize(16); doc.setFont('helvetica','bold');
+      doc.setTextColor(...color);
+      const titleLines = doc.splitTextToSize(title, pw - ml - 14 - ml);
+      doc.text(titleLines[0], ml+14, y+5);
+      y += 8; rule(color);
+    }
+
+    function qBlock(title, responses, color, desc) {
+      if (y + 10 > maxY) newPage();
+      const barH = 7;
+      if (y + barH > maxY) newPage();
+      doc.setFillColor(...color); doc.setTextColor(...C.bg);
+      doc.roundedRect(ml, y-5, cw, barH, 1.5, 1.5, 'F');
+      doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+      const titleLines = doc.splitTextToSize(title, cw - 6);
+      doc.text(titleLines[0], ml+3, y); y += 3; gap(2);
+      if (desc) { tx(desc, ml+2, 7.5, C.muted, false, cw-4); gap(2); }
+      const entries = Object.entries(responses || {});
+      if (!entries.length) { tx('No responses yet.', ml+4, 7.5, C.muted, false, cw-8); }
+      else {
+        entries.forEach(([name, text]) => {
+          if (y + 5 > maxY) newPage();
+          doc.setFillColor(...color); doc.rect(ml, y-3, 1.5, 3, 'F');
+          tx(name.toUpperCase(), ml+5, 7, color, true, cw-10);
+          tx(text, ml+5, 8, C.text, false, cw-10); gap(3);
+        });
+      }
+      gap(5);
+    }
+
+    // ── COVER ──
+    bgFill();
+    doc.setFontSize(52); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.g[2]); doc.text('NATURE', pw/2, 85, {align:'center'});
+    doc.setFontSize(11); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text('Nature · Ecology · Biology · Environment', pw/2, 99, {align:'center'});
+    doc.text('Collaborative Speculative Artwork Development', pw/2, 108, {align:'center'});
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.setTextColor(...C.g[2]); doc.text(`Group ${currentGroup}`, pw/2, 122, {align:'center'});
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setTextColor(...C.muted);
+    doc.text(`Exported: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, pw/2, 131, {align:'center'});
+
+    // Members listed
+    const allNames = new Set();
+    const cr = groupData.combineResponses || {};
+    const fr = groupData.finalResponses || {};
+    const synth = groupData.synthesisByUser || {};
+    Object.values(cr).forEach(r => Object.keys(r).forEach(n => allNames.add(n)));
+    Object.values(fr).forEach(r => Object.keys(r).forEach(n => allNames.add(n)));
+    Object.keys(synth).forEach(n => allNames.add(n));
+    if (allNames.size) {
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.setTextColor(...C.muted);
+      doc.text('Group members: ' + Array.from(allNames).join(', '), pw/2, 142, {align:'center'});
+    }
+
+    // ── SECTION 01: SELECTIONS ──
+    newPage(); sectionHead('01','NATURAL IMAGE + TECHNOLOGY', C.g[2]);
+    const sel = groupData.selections || {};
+    const natResearch = groupData.natResearch || {};
+    if (sel.naturalImage) {
+      tx('SELECTED NATURAL IMAGE', ml, 8, C.g[2], true);
+      tx(sel.naturalImage.label + (sel.naturalImage.selectedBy ? ` — selected by ${sel.naturalImage.selectedBy}` : ''), ml+4, 9, C.text, false, cw-4);
+      gap(3);
+      // Research notes from each member
+      const researchEntries = Object.entries(natResearch).filter(([,d]) => d.notes || d.imageBase64);
+      if (researchEntries.length) {
+        tx('RESEARCH NOTES', ml, 8, C.g[2], true);
+        gap(2);
+        for (const [name, data] of researchEntries) {
+          if (y+6 > maxY) newPage();
+          doc.setFillColor(...C.g[2]); doc.rect(ml, y-4, 1.5, 4, 'F');
+          tx(name.toUpperCase(), ml+5, 7, C.g[2], true, cw-5);
+          if (data.imageBase64) {
+            try {
+              const imgData = `data:image/jpeg;base64,${data.imageBase64}`;
+              const tmp = new Image();
+              await new Promise(r => { tmp.onload=r; tmp.onerror=r; tmp.src=imgData; });
+              const aspect = tmp.naturalWidth / (tmp.naturalHeight || 1);
+              const iw = Math.min(70, cw * 0.45), ih = iw / (aspect || 1);
+              if (y + ih + 4 > maxY) newPage();
+              doc.addImage(imgData, 'JPEG', ml+5, y, iw, ih);
+              y += ih + 3;
+            } catch(e) {}
+          }
+          if (data.notes) { tx(data.notes, ml+5, 8, C.text, false, cw-5); }
+          gap(5);
+        }
+      }
+    }
+    if (sel.technology) {
+      const tech = TECHNOLOGIES.find(t => t.id === sel.technology.id);
+      if (tech) {
+        tx('SELECTED TECHNOLOGY', ml, 8, C.b[2], true);
+        tx(tech.name, ml+4, 9, C.text, false, cw-4);
+        gap(1); tx(tech.desc, ml+4, 7.5, C.muted, false, cw-4);
+        gap(3);
+      }
+    }
+    gap(3);
+    qBlock('HOW WE COMBINED THEM', (cr['nattech'] || {}), C.g[2]);
+
+    // ── SECTION 02: THEME ──
+    newPage(); sectionHead('02','SELECTED THEME', C.br[2]);
+    if (sel.theme) {
+      const theme = THEMES.find(t => t.id === sel.theme.id);
+      if (theme) {
+        tx(theme.name, ml, 12, C.br[3], true, cw);
+        gap(2); tx(theme.desc, ml, 8.5, C.muted, false, cw);
+        gap(4);
+      }
+    } else { tx('No theme selected yet.', ml, 9, C.muted); gap(4); }
+    qBlock('HOW THIS THEME SHAPES OUR ARTWORK', (cr['theme'] || {}), C.br[2]);
+
+    // ── SECTION 03: UPLOADED IMAGES ──
+    newPage(); sectionHead('03','SKETCHES & INSPIRATION IMAGES', C.g[3]);
+    const sketches = groupData.sketches || [];
+    if (!sketches.length) { tx('No images uploaded yet.', ml, 9, C.muted); }
+    else {
+      const imgW = (cw - 6) / 3;
+      let col = 0, rowY = y;
+      for (const sk of sketches) {
+        try {
+          const imgData = `data:image/jpeg;base64,${sk.base64}`;
+          const tmp = new Image();
+          await new Promise(r => { tmp.onload=r; tmp.onerror=r; tmp.src=imgData; });
+          const ih = imgW * 0.75;
+          if (col === 0 && rowY + ih + 12 > maxY) { newPage(); rowY = y; }
+          const x = ml + col * (imgW + 3);
+          doc.addImage(imgData, 'JPEG', x, rowY, imgW, ih);
+          if (sk.description) {
+            doc.setFontSize(5.5); doc.setFont('helvetica','normal');
+            doc.setTextColor(...C.muted);
+            const dLines = doc.splitTextToSize(sk.description, imgW);
+            doc.text(dLines[0], x, rowY + ih + 3);
+          }
+          col++; if (col >= 3) { col = 0; rowY += ih + 10; y = rowY; }
+        } catch(e) {}
+      }
+      if (col > 0) { y = rowY + (imgW * 0.75) + 10; }
+    }
+
+    // ── SECTION 03b: WHAT WE LOVE ──
+    newPage(); sectionHead('03b','WHAT WE LOVE', C.b[2]);
+    const withLikes = sketches.filter(s => s.likes && s.likes.length);
+    if (!withLikes.length) { tx('No likes recorded yet.', ml, 9, C.muted); }
+    else {
+      withLikes.forEach((sk, i) => {
+        const idx = sketches.indexOf(sk);
+        if (y+8 > maxY) newPage();
+        doc.setFillColor(...C.g[2]); doc.rect(ml, y-5, 2, 5, 'F');
+        tx(`IMAGE ${String(idx+1).padStart(2,'0')} — ${sk.uploader}`, ml+5, 10, C.text, true);
+        if (sk.description) tx(sk.description, ml+5, 8, C.muted, false, cw-5);
+        sk.likes.forEach(l => tx(`• ${l.text}  — ${l.author}`, ml+5, 8.5, C.text, false, cw-5));
+        gap(6);
+      });
+    }
+
+    // ── SECTION 04: SPECULATIVE ARTWORK IDEAS ──
+    newPage(); sectionHead('04','SPECULATIVE ARTWORK IDEAS', C.b[2]);
+    FINAL_QUESTIONS.forEach((item, qi) => {
+      const col = qi%2===0 ? C.g[2] : C.b[2];
+      qBlock(item.q, fr[item.id]||{}, col, item.desc);
+    });
+
+    // ── SECTION 05: FINAL SYNTHESIS ──
+    newPage(); sectionHead('05','FINAL SYNTHESIS', C.g[2]);
+    const synthEntries = Object.entries(synth);
+    if (!synthEntries.length) { tx('No syntheses written yet.', ml, 9, C.muted); }
+    else {
+      synthEntries.forEach(([name, text]) => {
+        if (y+8 > maxY) newPage();
+        doc.setFillColor(...C.g[2]); doc.rect(ml, y-4, cw, 0.5, 'F');
+        gap(2); tx(name, ml, 12, C.g[2], true, cw);
+        gap(1); tx(text, ml, 8.5, C.text, false, cw); gap(7);
+      });
+    }
+
+    // ── FOOTERS ──
+    const total = doc.getNumberOfPages();
+    for (let p=1; p<=total; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7); doc.setFont('helvetica','normal');
+      doc.setTextColor(...C.muted);
+      doc.text(`NATURE — Speculative Artwork  ·  Group ${currentGroup}  ·  Page ${p} of ${total}`, pw/2, ph-mb+10, {align:'center'});
+    }
+
+    doc.save(`NATURE_Group${currentGroup}_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('PDF exported! 🌿', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('PDF error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '⬇ Export Group PDF';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════
+// AUTO-SAVE
+// ═══════════════════════════════════════════════════
+const _draftTimers = {};
+function draftKey(fieldId) { return `nature_draft_g${currentGroup}_${currentUser}_${fieldId}`; }
+function saveDraft(fieldId, value) { try { localStorage.setItem(draftKey(fieldId), value); } catch(e) {} }
+function loadDraft(fieldId) { try { return localStorage.getItem(draftKey(fieldId)) || null; } catch(e) { return null; } }
+function clearDraft(fieldId) { try { localStorage.removeItem(draftKey(fieldId)); } catch(e) {} }
+function clearFieldDraft(fieldId) { clearDraft(fieldId); }
+
+function autoSaveToFirebase(fieldId, saveFn) {
+  clearTimeout(_draftTimers[fieldId]);
+  _draftTimers[fieldId] = setTimeout(async () => { await saveFn(); }, 1500);
+}
+
+function attachAutoSave(textareaId, fieldId, saveFn) {
+  const el = document.getElementById(textareaId);
+  if (!el) return;
+  const draft = loadDraft(fieldId);
+  if (draft && !el.value) el.value = draft;
+  const getIndicator = () => el.closest('.my-response-box, .synthesis-my-section')?.querySelector('.autosave-indicator');
+  el.addEventListener('input', () => {
+    saveDraft(fieldId, el.value);
+    const ind = getIndicator();
+    if (ind) ind.classList.add('visible');
+    autoSaveToFirebase(fieldId, async () => {
+      await saveFn();
+      const ind2 = getIndicator();
+      if (ind2) { ind2.textContent = ''; ind2.insertAdjacentText('beforeend', ' draft saved'); ind2.classList.add('visible'); }
+      setTimeout(() => { const ind3 = getIndicator(); if (ind3) ind3.classList.remove('visible'); }, 2000);
+    });
+  });
+}
+
+function wireAutoSaves() {
+  attachAutoSave('nat-research-notes', 'nat-research', async () => {
+    const el = document.getElementById('nat-research-notes');
+    if (!el || !el.value.trim()) return;
+    if (!groupData.natResearch) groupData.natResearch = {};
+    if (!groupData.natResearch[currentUser]) groupData.natResearch[currentUser] = {};
+    groupData.natResearch[currentUser].notes = el.value.trim();
+    await saveGroup();
+  });
+  attachAutoSave('cmytxt-nattech', 'combine_nattech', async () => {
+    const el = document.getElementById('cmytxt-nattech');
+    if (!el || !el.value.trim()) return;
+    if (!groupData.combineResponses) groupData.combineResponses = {};
+    if (!groupData.combineResponses['nattech']) groupData.combineResponses['nattech'] = {};
+    groupData.combineResponses['nattech'][currentUser] = el.value.trim();
+    await saveGroup();
+  });
+  attachAutoSave('cmytxt-theme', 'combine_theme', async () => {
+    const el = document.getElementById('cmytxt-theme');
+    if (!el || !el.value.trim()) return;
+    if (!groupData.combineResponses) groupData.combineResponses = {};
+    if (!groupData.combineResponses['theme']) groupData.combineResponses['theme'] = {};
+    groupData.combineResponses['theme'][currentUser] = el.value.trim();
+    await saveGroup();
+  });
+  FINAL_QUESTIONS.forEach(item => {
+    attachAutoSave(`mytxt-${item.id}`, `final_${item.id}`, async () => {
+      const el = document.getElementById(`mytxt-${item.id}`);
+      if (!el || !el.value.trim()) return;
+      if (!groupData.finalResponses) groupData.finalResponses = {};
+      if (!groupData.finalResponses[item.id]) groupData.finalResponses[item.id] = {};
+      groupData.finalResponses[item.id][currentUser] = el.value.trim();
+      await saveGroup();
+    });
+  });
+  attachAutoSave('synthesis-txt', 'synthesis', async () => {
+    const el = document.getElementById('synthesis-txt');
+    if (!el || !el.value.trim()) return;
+    if (!groupData.synthesisByUser) groupData.synthesisByUser = {};
+    groupData.synthesisByUser[currentUser] = el.value.trim();
+    await saveGroup();
+  });
+}
+
+// Drag-and-drop on sketch upload zone
+const zone = document.getElementById('upload-zone');
+if (zone) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('file-input').files = dt.files;
+      handleFileUpload({ target: { files: dt.files, value: '' } });
+    }
+  });
+}
+
+document.addEventListener('firebase-error', (e) => {
+  const notice = document.getElementById('config-notice');
+  notice.style.display = 'block';
+  notice.innerHTML = `<strong>⚠️ Firebase Error:</strong> ${e.detail}. Check your Firestore rules at console.firebase.google.com.`;
+});
+</script>
+
+<!-- AI Disclaimer Footer -->
+<footer id="ai-disclaimer">
+  <div class="disclaimer-inner">
+    <div class="disclaimer-icon">⚠</div>
+    <div class="disclaimer-body">
+      <div class="disclaimer-label">A Note on AI (Automation)</div>
+      <p>Sarah used AI (automation) to help construct the html to setup this tool by prompting it with details about the idea, the features, the parts, and the framework. Sarah believes that many things should not be automated using AI and that users should be cautious about the <strong>inaccuracies and bias in the system</strong>, <strong>exploitation of workers</strong>, the <strong>environmental impact</strong>, and the <strong>unethical use of the work of people without compensation, consent, or attribution</strong>.</p>
+      <p>While Sarah still struggles with the issues related to how AI (automation) could impact humans and the world, Sarah is experimenting with using it to support education and equity in instances where it does not automate the work of humans that involves learning, creativity, and emotions. In this case, Sarah believes that this tool might help students to streamline the collaboration process and free them up for the fun, creative collaborative learning. However, the actual reality is unknown and <strong>students please share whether this helps or not.</strong></p>
+      <p>And, the possibility of people becoming reliant on the technology is a concern, especially because the design, deployment, and use is in the power of a few individuals (without guardrails or oversight). Sarah worries about this reliance on the technology when those in power make the cost to use it high and <strong>this creates an equity issue.</strong></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── SETUP SCREEN CANVAS ANIMATION ──
+// Draws animated organic network: nodes that pulse like cells,
+// connected by thin lines like mycelium/neural networks,
+// with floating particles like spores/data points.
+(function() {
+  const canvas = document.getElementById('setup-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes, particles, animId;
+
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function initNodes() {
+    const count = Math.floor((W * H) / 18000);
+    nodes = Array.from({length: Math.max(18, Math.min(count, 50))}, () => ({
+      x: rand(0, W), y: rand(0, H),
+      vx: rand(-0.18, 0.18), vy: rand(-0.18, 0.18),
+      r: rand(2, 5.5),
+      phase: rand(0, Math.PI * 2),
+      speed: rand(0.008, 0.022),
+      // some nodes are "nature nodes" (slightly warmer), some are "data nodes"
+      type: Math.random() > 0.5 ? 'nature' : 'data'
+    }));
+    particles = Array.from({length: 60}, () => ({
+      x: rand(0, W), y: rand(0, H),
+      vx: rand(-0.4, 0.4), vy: rand(-0.6, -0.1),
+      r: rand(0.5, 1.5),
+      alpha: rand(0.1, 0.5),
+      life: rand(0, 1), speed: rand(0.001, 0.004)
+    }));
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw connections
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const maxDist = 160;
+        if (dist < maxDist) {
+          const alpha = (1 - dist/maxDist) * 0.18;
+          const isNature = nodes[i].type === 'nature' && nodes[j].type === 'nature';
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          // Organic slight curve
+          const mx = (nodes[i].x + nodes[j].x) / 2 + (Math.random() - 0.5) * 10;
+          const my = (nodes[i].y + nodes[j].y) / 2 + (Math.random() - 0.5) * 10;
+          ctx.quadraticCurveTo(mx, my, nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = isNature
+            ? `rgba(77,174,255,${alpha})`
+            : `rgba(32,144,240,${alpha * 0.7})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const pulse = Math.sin(t * n.speed * 1000 + n.phase);
+      const glow = n.r + pulse * 1.5;
+      const isNature = n.type === 'nature';
+      // Outer glow
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glow * 4);
+      grad.addColorStop(0, isNature ? 'rgba(77,174,255,0.25)' : 'rgba(32,144,240,0.2)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glow * 4, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      // Core dot
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
+      ctx.fillStyle = isNature ? 'rgba(112,196,255,0.7)' : 'rgba(77,174,255,0.55)';
+      ctx.fill();
+      // Move
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < -20) n.x = W + 20;
+      if (n.x > W + 20) n.x = -20;
+      if (n.y < -20) n.y = H + 20;
+      if (n.y > H + 20) n.y = -20;
+    });
+
+    // Draw floating particles (spores / data bits)
+    particles.forEach(p => {
+      p.life += p.speed;
+      if (p.life > 1) { p.life = 0; p.x = rand(0, W); p.y = H + 5; p.alpha = rand(0.1, 0.4); }
+      const a = p.alpha * Math.sin(p.life * Math.PI);
+      ctx.beginPath();
+      ctx.arc(p.x + Math.sin(p.life * 8) * 4, p.y - p.life * H * 0.8, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(170,216,255,${a})`;
+      ctx.fill();
+    });
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initNodes(); });
+  resize();
+  initNodes();
+  animId = requestAnimationFrame(draw);
+
+  // Stop animation when setup screen is hidden
+  const observer = new MutationObserver(() => {
+    const screen = document.getElementById('setup-screen');
+    if (screen && screen.style.display === 'none') {
+      cancelAnimationFrame(animId);
+    } else if (screen && screen.style.display !== 'none') {
+      resize(); initNodes();
+      animId = requestAnimationFrame(draw);
+    }
+  });
+  const screen = document.getElementById('setup-screen');
+  if (screen) observer.observe(screen, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+</body>
+</html>
